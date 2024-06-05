@@ -1,4 +1,4 @@
-//
+''
 CompletableFuture<SendResult<K, V>> completableFuture = gksKafkaTemplate.send(message);
 ListenableFuture<SendResult<K, V>> listenableFuture = new ListenableFuture<SendResult<K, V>>() {
     @Override
@@ -17,4 +17,4 @@ ListenableFuture<SendResult<K, V>> listenableFuture = new ListenableFuture<SendR
 AtomicBoolean status = new AtomicBoolean(false);
 listenableFuture.addCallback(createListenableFutureCallback(status));
 return status.get();
-//
+''
