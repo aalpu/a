@@ -56,7 +56,12 @@ def run_command_on_server():
     pyautogui.hotkey('ctrl', 'c')
     time.sleep(1)
     output = pyperclip.paste()
-    return output
+
+    # Process output to extract the actual command result, skipping the first two lines
+    output_lines = output.splitlines()
+    command_output = '\n'.join(output_lines[2:])  # Skip the first two lines
+
+    return command_output
 
 def automate_servers(file_path, password):
     servers = read_server_details(file_path)
@@ -75,16 +80,14 @@ def automate_servers(file_path, password):
     return outputs
 
 def compare_outputs(outputs):
-    first_group = outputs[:4]
-    second_group = outputs[4:]
-    return first_group == second_group
+    return all(output == outputs[0] for output in outputs)
 
 def generate_report(outputs, comparison_result):
     report = 'Server Outputs:\n'
     for i, output in enumerate(outputs):
         report += f'Server {i+1} output: {output}\n'
     report += '\nComparison Result:\n'
-    report += 'First four servers outputs match with the remaining: ' + str(comparison_result) + '\n'
+    report += 'All servers outputs are the same: ' + str(comparison_result) + '\n'
     return report
 
 # Main function
@@ -100,8 +103,5 @@ if __name__ == "__main__":
         report_file.write(report)
     
     print('Report generated: report.txt')
-
-
-    output_lines = output.splitlines()
-    command_output = '\n'.join(output_lines[2:])
 ```
+
