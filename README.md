@@ -100,4 +100,8 @@ if __name__ == "__main__":
         report_file.write(report)
     
     print('Report generated: report.txt')
+
+
+    output_lines = output.splitlines()
+    command_output = '\n'.join(output_lines[2:])
 ```
