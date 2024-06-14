@@ -1,3 +1,27 @@
+### Weekly Process Report
+
+#### Photon Migration of TS COB COLT Service
+- Rewrote the Kafka Producer code.
+- Raised a PR for final review.
+
+#### Photon Migration of Cash Matching Batch
+- Completed local setup.
+- Fixed a database connection bug.
+
+#### L2 Task: EPV ID Validation
+- Pitched the idea to Hajira.
+- Wrote the Python script.
+- Tested it on my local system.
+
+#### Additional Tasks
+- Emailed the PDF detailing changes made in the COB COLT Service.
+
+
+
+
+
+
+
 ```
 import pyautogui
 import time
