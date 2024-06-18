@@ -1,61 +1,59 @@
 ```
-
-### Weekly Process Report
-
-#### Photon Migration of TS COB COLT Service
-- Rewrote the Kafka Producer code.
-- Raised a PR for final review.
-
-#### Photon Migration of Cash Matching Batch
-- Completed local setup.
-- Fixed a database connection bug.
-
-#### L2 Task: EPV ID Validation
-- Pitched the idea to Hajira.
-- Wrote the Python script.
-- Tested it on my local system.
-
-#### Additional Tasks
-- Emailed the PDF detailing changes made in the COB COLT Service.
-
-```
-
-
-
-
-
-```
 import pyautogui
 import time
 import pyperclip
+import re
+import os
 
-def read_server_details(file_path):
-    with open(file_path, 'r') as file:
-        servers = [line.strip() for line in file.readlines()]
-    return servers
+def parse_app_audit_log(log_path):
+    """
+    Parses the AppAudit.log to extract values for creating the command.
+    
+    Args:
+    log_path (str): The path to the AppAudit.log file.
+    
+    Returns:
+    tuple: Extracted values (AppID, safe, folder, name) from the log.
+    """
+    with open(log_path, 'r') as file:
+        logs = file.readlines()
 
-def open_remote_desktop(hostname, password):
-    # Open Remote Desktop Connection
-    pyautogui.press('win')
-    time.sleep(1)
-    pyautogui.write('Remote Desktop Connection')
-    time.sleep(1)
-    pyautogui.press('enter')
-    time.sleep(3)
+    for log in logs:
+        match = re.search(r'Provider.*?has successfully fetched password.*?safe=(.*?), folder=(.*?), name=(.*?)] .*?application \[(.*?)\]', log)
+        if match:
+            app_id = match.group(4)
+            safe = match.group(1)
+            folder = match.group(2)
+            name = match.group(3)
+            return app_id, safe, folder, name
+    return None, None, None, None
 
-    # Fill in the computer details
-    pyautogui.write(hostname)
-    time.sleep(1)
-    pyautogui.press('enter')
-    time.sleep(10)  # Adjust the sleep time based on your network speed
+def create_password_command(app_id, safe, folder, name):
+    """
+    Creates the command to fetch the password based on the extracted values.
+    
+    Args:
+    app_id (str): The application ID.
+    safe (str): The safe value.
+    folder (str): The folder value.
+    name (str): The object name.
+    
+    Returns:
+    str: The constructed command.
+    """
+    command = f'PasswordSDK GetPassword /p AppDeses.AppID="{app_id}" /p Query="safe={safe}; folder={folder}; Object={name}" /o Password'
+    return command
 
-    # Enter user password
-    pyautogui.write(password)
-    time.sleep(1)
-    pyautogui.press('enter')
-    time.sleep(10)  # Adjust the sleep time for login
-
-def run_command_on_server():
+def execute_command_and_get_password(command):
+    """
+    Executes the command in CMD and fetches the password from the output.
+    
+    Args:
+    command (str): The command to be executed.
+    
+    Returns:
+    str: The extracted password from the command output.
+    """
     # Open CMD
     pyautogui.press('win')
     time.sleep(1)
@@ -64,14 +62,13 @@ def run_command_on_server():
     pyautogui.press('enter')
     time.sleep(2)
     
-    # Navigate to directory
-    cmd = 'cd /d D:\\Program Files (x86)\\CyberArk\\ApplicationPasswordSdk'
-    pyautogui.write(cmd)
+    # Navigate to the SDK directory
+    sdk_directory_command = 'cd /d D:\\Program Files (x86)\\CyberArk\\ApplicationPasswordSdk'
+    pyautogui.write(sdk_directory_command)
     pyautogui.press('enter')
     time.sleep(1)
     
-    # Run the command and get output
-    command = 'XYZ'
+    # Run the password command
     pyautogui.write(command)
     pyautogui.press('enter')
     time.sleep(3)
@@ -83,51 +80,81 @@ def run_command_on_server():
     time.sleep(1)
     output = pyperclip.paste()
 
-    # Process output to extract the actual command result, skipping the first two lines
+    # Extract the password from the second last line of the output
     output_lines = output.splitlines()
-    command_output = '\n'.join(output_lines[2:])  # Skip the first two lines
+    password = output_lines[-2].strip()  # Assuming the password is in the second last line
 
-    return command_output
+    return password
 
-def automate_servers(file_path, password):
-    servers = read_server_details(file_path)
-    outputs = []
-
-    for i, server in enumerate(servers):
-        print(f'Processing server {i+1}/{len(servers)}: {server}')
-        open_remote_desktop(server, password)
-        output = run_command_on_server()
-        outputs.append(output)
-        
-        # Close the Remote Desktop session (assumes session is still in focus)
-        pyautogui.hotkey('alt', 'f4')
-        time.sleep(2)
+def check_and_store_password(password, password_file_path):
+    """
+    Checks if the password file is empty and stores the password or compares it with the existing password.
     
-    return outputs
-
-def compare_outputs(outputs):
-    return all(output == outputs[0] for output in outputs)
-
-def generate_report(outputs, comparison_result):
-    report = 'Server Outputs:\n'
-    for i, output in enumerate(outputs):
-        report += f'Server {i+1} output: {output}\n'
-    report += '\nComparison Result:\n'
-    report += 'All servers outputs are the same: ' + str(comparison_result) + '\n'
-    return report
-
-# Main function
-if __name__ == "__main__":
-    file_path = 'server_details.txt'
-    password = 'your_password'
+    Args:
+    password (str): The password to check or store.
+    password_file_path (str): The path to the password file.
     
-    outputs = automate_servers(file_path, password)
-    comparison_result = compare_outputs(outputs)
-    report = generate_report(outputs, comparison_result)
+    Returns:
+    bool: True if the password matches or is stored successfully, False otherwise.
+    """
+    if not os.path.exists(password_file_path) or os.stat(password_file_path).st_size == 0:
+        with open(password_file_path, 'w') as file:
+            file.write(password)
+        return True  # Password was stored as the file was empty
+    else:
+        with open(password_file_path, 'r') as file:
+            existing_password = file.read().strip()
+        return existing_password == password  # Return True if passwords match, False otherwise
+
+def automate_single_server():
+    """
+    Automates the process for a single server to extract the password and compare it.
+    """
+    # Define the path to the AppAudit.log file
+    log_file_path = r'D:\Program Files (x86)\CyberArk\ApplicationPasswordProvider\Logs\AppAudit.log'
     
+    # Parse the AppAudit.log for values to create the command
+    app_id, safe, folder, name = parse_app_audit_log(log_file_path)
+    if not all([app_id, safe, folder, name]):
+        print(f'Failed to parse AppAudit.log')
+        return
+
+    # Create the command
+    command = create_password_command(app_id, safe, folder, name)
+    
+    # Run the command and get the password
+    password = execute_command_and_get_password(command)
+    
+    # Define the path to the password file
+    password_file_path = r'\\Network\isaan01102\temp\EPV_Password.txt'
+    
+    # Check and store the password
+    password_match = check_and_store_password(password, password_file_path)
+    
+    # Generate a report
+    report = generate_report(password_match)
+    
+    # Save the report
     with open('report.txt', 'w') as report_file:
         report_file.write(report)
     
     print('Report generated: report.txt')
-```
 
+def generate_report(password_match):
+    """
+    Generates a report based on the password comparison result.
+    
+    Args:
+    password_match (bool): The result of the password comparison.
+    
+    Returns:
+    str: The generated report content.
+    """
+    report = 'Password Comparison Result:\n'
+    report += 'Password match status: ' + ("Match" if password_match else "Mismatch") + '\n'
+    return report
+
+# Main function
+if __name__ == "__main__":
+    automate_single_server()
+```
