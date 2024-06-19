@@ -43,10 +43,11 @@ import time
 import pyperclip
 import re
 import os
+import socket
 
 def parse_app_audit_log(log_path):
     """
-    Parses the AppAudit.log to extract values for creating the command.
+    Parses the first line of the AppAudit.log to extract values for creating the command.
     
     Args:
     log_path (str): The path to the AppAudit.log file.
@@ -55,17 +56,30 @@ def parse_app_audit_log(log_path):
     tuple: Extracted values (AppID, safe, folder, name) from the log.
     """
     with open(log_path, 'r') as file:
-        logs = file.readlines()
+        first_line = file.readline().strip()
 
-    for log in logs:
-        match = re.search(r'Provider.*?has successfully fetched password.*?safe=(.*?), folder=(.*?), name=(.*?)] .*?application \[(.*?)\]', log)
-        if match:
-            app_id = match.group(4)
-            safe = match.group(1)
-            folder = match.group(2)
-            name = match.group(3)
-            return app_id, safe, folder, name
-    return None, None, None, None
+    # Print the first line for debugging purposes
+    print(f"First line from log: {first_line}")
+
+    # Improved regex pattern to match the line structure
+    match = re.search(
+        r'Provider.*?has successfully fetched password \[safe\s*=\s*(.*?), folder\s*=\s*(.*?), name\s*=\s*(.*?)\] .*?for application \[(.*?)\]', 
+        first_line
+    )
+
+    if match:
+        safe = match.group(1).strip()
+        folder = match.group(2).strip()
+        name = match.group(3).strip()
+        app_id = match.group(4).strip()
+
+        # Print extracted values for debugging purposes
+        print(f"Extracted values: AppID={app_id}, Safe={safe}, Folder={folder}, Name={name}")
+        return app_id, safe, folder, name
+    else:
+        # Print error message for debugging purposes
+        print(f"No match found in log: {first_line}")
+        return None, None, None, None
 
 def create_password_command(app_id, safe, folder, name):
     """
@@ -119,31 +133,84 @@ def execute_command_and_get_password(command):
     time.sleep(1)
     output = pyperclip.paste()
 
+    # Print the output for debugging purposes
+    print(f"Command output: {output}")
+
     # Extract the password from the second last line of the output
     output_lines = output.splitlines()
-    password = output_lines[-2].strip()  # Assuming the password is in the second last line
+    if len(output_lines) >= 2:
+        password = output_lines[-2].strip()  # Assuming the password is in the second last line
+    else:
+        password = None
 
     return password
 
-def check_and_store_password(password, password_file_path):
+def check_and_store_password(server_name, password, password_file_path):
     """
-    Checks if the password file is empty and stores the password or compares it with the existing password.
+    Checks if the password file contains 8 entries and compares the passwords.
     
     Args:
+    server_name (str): The server name.
     password (str): The password to check or store.
     password_file_path (str): The path to the password file.
     
     Returns:
-    bool: True if the password matches or is stored successfully, False otherwise.
+    None
     """
-    if not os.path.exists(password_file_path) or os.stat(password_file_path).st_size == 0:
+    password_entry = f"{server_name}={password}"
+    
+    if not os.path.exists(password_file_path):
         with open(password_file_path, 'w') as file:
-            file.write(password)
-        return True  # Password was stored as the file was empty
+            file.write(password_entry + '\n')
+        return  # Password was stored as the file was empty
     else:
-        with open(password_file_path, 'r') as file:
-            existing_password = file.read().strip()
-        return existing_password == password  # Return True if passwords match, False otherwise
+        with open(password_file_path, 'r+') as file:
+            existing_passwords = [line.strip() for line in file.readlines()]
+            
+            # If there are less than 8 entries, add the new password entry
+            if len(existing_passwords) < 8:
+                file.write(password_entry + '\n')
+            else:
+                # If there are already 8 entries, compare passwords and generate a report
+                file.seek(0)
+                file.write(password_entry + '\n')
+                file.truncate()
+                generate_report(password_file_path)
+                # Clear the password file
+                file.seek(0)
+                file.truncate()
+
+def generate_report(password_file_path):
+    """
+    Generates a report based on the password comparison result.
+    
+    Args:
+    password_file_path (str): The path to the password file.
+    
+    Returns:
+    None
+    """
+    with open(password_file_path, 'r') as file:
+        existing_passwords = [line.strip() for line in file.readlines()]
+        
+    if not existing_passwords:
+        return
+
+    existing_password = existing_passwords[0].split('=')[1]
+    mismatches = [entry for entry in existing_passwords if entry.split('=')[1] != existing_password]
+
+    report = 'Password Comparison Result:\n'
+    if not mismatches:
+        report += 'All server passwords match.\n'
+    else:
+        report += 'Password mismatch found in the following servers:\n'
+        for mismatch in mismatches:
+            report += mismatch.split('=')[0] + '\n'
+
+    with open('report.txt', 'w') as report_file:
+        report_file.write(report)
+    
+    print('Report generated: report.txt')
 
 def automate_single_server():
     """
@@ -163,37 +230,21 @@ def automate_single_server():
     
     # Run the command and get the password
     password = execute_command_and_get_password(command)
+    if not password:
+        print(f'Failed to retrieve password from the command output')
+        return
+    
+    # Get the server name
+    server_name = socket.gethostname()
     
     # Define the path to the password file
     password_file_path = r'\\Network\isaan01102\temp\EPV_Password.txt'
     
     # Check and store the password
-    password_match = check_and_store_password(password, password_file_path)
-    
-    # Generate a report
-    report = generate_report(password_match)
-    
-    # Save the report
-    with open('report.txt', 'w') as report_file:
-        report_file.write(report)
-    
-    print('Report generated: report.txt')
-
-def generate_report(password_match):
-    """
-    Generates a report based on the password comparison result.
-    
-    Args:
-    password_match (bool): The result of the password comparison.
-    
-    Returns:
-    str: The generated report content.
-    """
-    report = 'Password Comparison Result:\n'
-    report += 'Password match status: ' + ("Match" if password_match else "Mismatch") + '\n'
-    return report
+    check_and_store_password(server_name, password, password_file_path)
 
 # Main function
 if __name__ == "__main__":
     automate_single_server()
+
 ```
