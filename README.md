@@ -1,4 +1,30 @@
 ```
+def parse_app_audit_log(log_path):
+    """
+    Parses the first line of the AppAudit.log to extract values for creating the command.
+    
+    Args:
+    log_path (str): The path to the AppAudit.log file.
+    
+    Returns:
+    tuple: Extracted values (AppID, safe, folder, name) from the log.
+    """
+    with open(log_path, 'r') as file:
+        first_line = file.readline().strip()
+
+    match = re.search(
+        r'Provider.*?has successfully fetched password.*?safe=(.*?), folder=(.*?), name=(.*?)] .*?application \[(.*?)\]', 
+        first_line
+    )
+    if match:
+        app_id = match.group(4).strip()
+        safe = match.group(1).strip()
+        folder = match.group(2).strip()
+        name = match.group(3).strip()
+        return app_id, safe, folder, name
+    return None, None, None, None
+```
+```
 import pyautogui
 import time
 import pyperclip
