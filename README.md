@@ -1,4 +1,8 @@
 ```
+r'\[(.*?)\] \| :: \| APPAU0011 Provider (.*?) has successfully fetched password \[safe (.*?), folder=(.*?),name=(.*?)\] .*?for application \[(.*?)\]'
+```
+
+```
 import re
 
 def parse_app_audit_log(log_path):
