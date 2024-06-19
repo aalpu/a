@@ -12,10 +12,15 @@ def parse_app_audit_log(log_path):
     with open(log_path, 'r') as file:
         first_line = file.readline().strip()
 
+    # Print the first line for debugging purposes
+    print(f"First line from log: {first_line}")
+
+    # Improved regex pattern to match the line structure
     match = re.search(
-        r'Provider.*?has successfully fetched password.*?safe=(.*?), folder=(.*?), name=(.*?)] .*?application \[(.*?)\]', 
+        r'Provider.*?has successfully fetched password \[safe=(.*?), folder=(.*?), name=(.*?)\] .*?for application \[(.*?)\]', 
         first_line
     )
+
     if match:
         app_id = match.group(4).strip()
         safe = match.group(1).strip()
