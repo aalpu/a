@@ -2,30 +2,31 @@
 def parse_app_audit_log(log_path):
     """
     Parses the first line of the AppAudit.log to extract values for creating the command.
+    
     Args:
-        log_path (str): The path to the AppAudit.log file.
+    log_path (str): The path to the AppAudit.log file.
+    
     Returns:
-        tuple: Extracted values (AppID, safe, folder, name) from the log, or (None, None, None, None) if the line cannot be parsed.
+    tuple: Extracted values (AppID, safe, folder, name) from the log.
     """
     with open(log_path, 'r') as file:
         first_line = file.readline().strip()
-        print(f"First line from log: {first_line}")
 
-        # Updated regex pattern to match the new line structure
-        match = re.search(
-            r'\[(.*?)\] \| :: \| APPAU@011 Provider (.*?) has successfully fetched password \[safe=(.*?), folder=(.*?), name=(.*?)\] .*?for application \[(.*?)\]',
-            first_line
-        )
+    # Print the first line for debugging purposes
+    print(f"First line from log: {first_line}")
 
-        if match:
-            timestamp = match.group(1)
-            provider = match.group(2)
-            safe = match.group(3)
-            folder = match.group(4)
-            name = match.group(5)
-            app_id = match.group(6)
-            return app_id, safe, folder, name
+    # Improved regex pattern to match the line structure
+    match = re.search(
+        r'Provider.*?has successfully fetched password \[safe\s*=\s*(.*?), folder\s*=\s*(.*?), name\s*=\s*(.*?)\] .*?for application \[(.*?)\]', 
+        first_line
+    )
 
+    if match:
+        safe = match.group(1).strip()
+        folder = match.group(2).strip()
+        name = match.group(3).strip()
+        app_id = match.group(4).strip()
+        return app_id, safe, folder, name
     return None, None, None, None
 ```
 ```
