@@ -1,39 +1,41 @@
 ```
-def parse_app_audit_log(log_path):
-    """
-    Parses the first line of the AppAudit.log to extract values for creating the command.
+import re
+
+def extract_info(file_path):
+    # Define the regular expression patterns for the required fields
+    safe_pattern = r'safe\s*=\s*([^,]+)'
+    folder_pattern = r'folder\s*=\s*([^,]+)'
+    name_pattern = r'name\s*=\s*([^]]+)'
+    appid_pattern = r'application\s*\[\s*([^]]+)\s*\]'
     
-    Args:
-    log_path (str): The path to the AppAudit.log file.
-    
-    Returns:
-    tuple: Extracted values (AppID, safe, folder, name) from the log.
-    """
-    with open(log_path, 'r') as file:
-        first_line = file.readline().strip()
+    with open(file_path, 'r') as file:
+        # Read the first line of the file
+        first_line = file.readline()
+        
+        # Extract the required fields using regular expressions
+        safe_match = re.search(safe_pattern, first_line)
+        folder_match = re.search(folder_pattern, first_line)
+        name_match = re.search(name_pattern, first_line)
+        appid_match = re.search(appid_pattern, first_line)
+        
+        # Extract the values from the match objects
+        safe = safe_match.group(1) if safe_match else None
+        folder = folder_match.group(1) if folder_match else None
+        name = name_match.group(1) if name_match else None
+        appid = appid_match.group(1) if appid_match else None
+        
+        return {
+            'safe': safe,
+            'folder': folder,
+            'name': name,
+            'appid': appid
+        }
 
-    # Print the first line for debugging purposes
-    print(f"First line from log: {first_line}")
+# Example usage
+file_path = 'path_to_your_log_file.log'
+info = extract_info(file_path)
+print(info)
 
-    # Improved regex pattern to match the line structure
-    match = re.search(
-        r'Provider.*?has successfully fetched password \[safe\s*=\s*(.*?), folder\s*=\s*(.*?), name\s*=\s*(.*?)\] .*?for application \[(.*?)\]', 
-        first_line
-    )
-
-    if match:
-        safe = match.group(1).strip()
-        folder = match.group(2).strip()
-        name = match.group(3).strip()
-        app_id = match.group(4).strip()
-
-        # Print extracted values for debugging purposes
-        print(f"Extracted values: AppID={app_id}, Safe={safe}, Folder={folder}, Name={name}")
-        return app_id, safe, folder, name
-    else:
-        # Print error message for debugging purposes
-        print(f"No match found in log: {first_line}")
-        return None, None, None, None
 ```
 ```
 import pyautogui
