@@ -38,21 +38,5 @@ print(info)
 
 ```
 ```
-Weekly Progress Report
 
-Java and Photon Migration of Trade Settlement Cash Matching Batch
-- Upgraded from Java 8 to Java 11 successfully.
-- Upgraded from Java 11 to Java 17 successfully.
-- Photon upgrade from 2.7 to 3.0 is in progress.
-- Fixed errors in JUnit test cases.
-- Wrote new test cases from scratch as the old ones did not work even with changes to annotations and code.
-- Raised a pull request for review.
-
-L2: EPV ID Validation
-- Completed the Python script with new functions such as:
-  - Parsing the AppAudit.log file
-  - Dynamically generating commands for different servers
-  - Generating a report including password compression details
-- Tested the script on my local system with different test cases.
-- Gave an internal demo to the team and Hajira.
 ```
