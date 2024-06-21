@@ -38,22 +38,8 @@ print(info)
 
 ```
 ```
-import mockit.Expectations;
-import mockit.Injectable;
-import mockit.Mocked;
-import mockit.Tested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.batch.core.StepContribution;
-import org.springframework.batch.core.scope.context.ChunkContext;
-import org.springframework.core.env.Environment;
-import org.springframework.jdbc.core.simple.SimpleJdbcCall;
-
-import javax.sql.DataSource;
-
 @ExtendWith(MockitoExtension.class)
 class MarkUpdateWireAndeceivableTaskletTest {
-
     @Tested
     MarkUpdateWireAndeceivableTasklet markUpdateWireAndeceivableTasklet;
 
@@ -82,17 +68,10 @@ class MarkUpdateWireAndeceivableTaskletTest {
             result = simpleJdbcCall;
 
             simpleJdbcCall.executeFunction(String.class);
-            result = "expectedResult";
+            result = anyString();
         }};
 
-        // Execute the method under test
         markUpdateWireAndeceivableTasklet.execute(stepContribution, chunkContext);
-
-        // You can add verifications if needed, e.g.:
-        new Verifications() {{
-            simpleJdbcCall.executeFunction(String.class);
-            times = 1;
-        }};
     }
 }
 
