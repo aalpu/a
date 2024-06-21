@@ -38,10 +38,12 @@ print(info)
 
 ```
 ```
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
@@ -53,10 +55,10 @@ import javax.sql.DataSource;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class MarkUpdateWireAndeceivableTaskletTest {
+class MarkUpdateWireAndReceivableTaskletTest {
 
     @InjectMocks
-    private MarkUpdateWireAndeceivableTasklet markUpdateWireAndeceivableTasklet;
+    private MarkUpdateWireAndReceivableTasklet markUpdateWireAndReceivableTasklet;
 
     @Mock
     private StepContribution stepContribution;
@@ -73,19 +75,28 @@ class MarkUpdateWireAndeceivableTaskletTest {
     @Mock
     private SimpleJdbcCall simpleJdbcCall;
 
+    @BeforeEach
+    void setUp() {
+        // Use a spy to allow partial mocking of the markUpdateWireAndReceivableTasklet instance
+        markUpdateWireAndReceivableTasklet = Mockito.spy(markUpdateWireAndReceivableTasklet);
+
+        // Mock the getSimpleJdbcCall method to return the mock simpleJdbcCall
+        doReturn(simpleJdbcCall).when(markUpdateWireAndReceivableTasklet).getSimpleJdbcCall();
+    }
+
     @Test
     void execute() throws Exception {
-        // Arrange
-        when(markUpdateWireAndeceivableTasklet.getSimpleJdbcCall()).thenReturn(simpleJdbcCall);
+        // Define behavior for the mocked SimpleJdbcCall
         when(simpleJdbcCall.withFunctionName("FUNC_COPY_UPDATED_CASHMATCHING_TO_AUDIT")).thenReturn(simpleJdbcCall);
-        when(simpleJdbcCall.executeFunction(String.class)).thenReturn("someString");
+        when(simpleJdbcCall.executeFunction(String.class)).thenReturn("expectedResult");
 
-        // Act
-        markUpdateWireAndeceivableTasklet.execute(stepContribution, chunkContext);
+        // Call the method under test
+        markUpdateWireAndReceivableTasklet.execute(stepContribution, chunkContext);
 
-        // Assert
+        // Verify interactions or assert results as needed
         verify(simpleJdbcCall).withFunctionName("FUNC_COPY_UPDATED_CASHMATCHING_TO_AUDIT");
         verify(simpleJdbcCall).executeFunction(String.class);
     }
 }
+
 ```
