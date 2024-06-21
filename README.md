@@ -38,27 +38,12 @@ print(info)
 
 ```
 ```
-<dependency>
-    <groupId>org.mockito</groupId>
-    <artifactId>mockito-core</artifactId>
-    <version>4.2.0</version>
-    <scope>test</scope>
-</dependency>
-<dependency>
-    <groupId>org.junit.jupiter</groupId>
-    <artifactId>junit-jupiter-engine</artifactId>
-    <version>5.8.2</version>
-    <scope>test</scope>
-</dependency>
-
-
-import org.junit.jupiter.api.BeforeEach;
+import mockit.Expectations;
+import mockit.Injectable;
+import mockit.Mocked;
+import mockit.Tested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.core.env.Environment;
@@ -66,51 +51,50 @@ import org.springframework.jdbc.core.simple.SimpleJdbcCall;
 
 import javax.sql.DataSource;
 
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 class MarkUpdateWireAndeceivableTaskletTest {
 
-    @InjectMocks
-    private MarkUpdateWireAndeceivableTasklet markUpdateWireAndeceivableTasklet;
+    @Tested
+    MarkUpdateWireAndeceivableTasklet markUpdateWireAndeceivableTasklet;
 
-    @Mock
-    private StepContribution stepContribution;
+    @Injectable
+    StepContribution stepContribution;
 
-    @Mock
-    private ChunkContext chunkContext;
+    @Injectable
+    ChunkContext chunkContext;
 
-    @Mock
-    private DataSource gosDataSource;
+    @Injectable
+    DataSource gosDataSource;
 
-    @Mock
-    private Environment environment;
+    @Injectable
+    Environment environment;
 
-    @Mock
-    private SimpleJdbcCall simpleJdbcCall;
-
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-    }
+    @Mocked
+    SimpleJdbcCall simpleJdbcCall;
 
     @Test
     void execute() throws Exception {
-        // Mock the behavior of getSimpleJdbcCall
-        when(markUpdateWireAndeceivableTasklet.getSimpleJdbcCall()).thenReturn(simpleJdbcCall);
+        new Expectations() {{
+            markUpdateWireAndeceivableTasklet.getSimpleJdbcCall();
+            result = simpleJdbcCall;
 
-        // Mock the behavior of withFunctionName
-        when(simpleJdbcCall.withFunctionName("FUNC_COPY_UPDATED_CASHMATCHING_TO_AUDIT")).thenReturn(simpleJdbcCall);
+            simpleJdbcCall.withFunctionName("FUNC_COPY_UPDATED_CASHMATCHING_TO_AUDIT");
+            result = simpleJdbcCall;
 
-        // Mock the behavior of executeFunction
-        when(simpleJdbcCall.executeFunction(String.class)).thenReturn("expectedResult");
+            simpleJdbcCall.executeFunction(String.class);
+            result = "expectedResult";
+        }};
 
         // Execute the method under test
         markUpdateWireAndeceivableTasklet.execute(stepContribution, chunkContext);
 
-        // Verify the interactions
-        verify(simpleJdbcCall).executeFunction(String.class);
+        // You can add verifications if needed, e.g.:
+        new Verifications() {{
+            simpleJdbcCall.executeFunction(String.class);
+            times = 1;
+        }};
     }
 }
+
 
 ```
