@@ -40,7 +40,8 @@ print(info)
 ```
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.*;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.env.StandardEnvironment;
 
@@ -56,25 +57,16 @@ public class TradesettlementCashmatchingBatchApplicationTest {
     @Mock
     private StandardEnvironment environment;
 
-    @Captor
-    private ArgumentCaptor<String[]> stringArrayCaptor;
-
     @Test
     public void test_TradesettlementCashmatchingBatchApplication() {
-        // Mock any necessary behavior on cashMatchingBatchService or environment
-
-        // Use ArgumentCaptor to capture the arguments passed to main method
-        Mockito.doNothing().when(cashMatchingBatchService).someMethod();
-
         // Call the main method of the application class
         tradesettlementCashmatchingBatchApplication.main(new String[0]);
 
         // Verify interactions or assert results as needed
-        verify(cashMatchingBatchService).someMethod();
-
-        verify(environment, atLeastOnce()).getProperty("someProperty");
-
+        // For example, you can verify that certain methods in the CashMatchingBatchService are called
+        // verify(cashMatchingBatchService).someMethod();
     }
 }
+
 
 ```
