@@ -69,33 +69,17 @@ class GOSDatabaseConfigurationTest {
     @Mock
     private DataSource dataSource;
 
-    // Injecting properties
-    @Mock
-    private long connectionTimeoutMs;
-
-    @Mock
-    private long idleTimeoutMs;
-
-    @Mock
-    private int maximumPoolSize;
-
-    @Mock
-    private int minimumIdle;
-
-    @Mock
-    private long maxLifetimeMs;
-
     @BeforeEach
     void setUp() {
         // Use a spy to allow partial mocking of the gosDatabaseConfiguration instance
         gosDatabaseConfiguration = Mockito.spy(new GOSDatabaseConfiguration());
 
-        // Mock the environment properties that would be used by the configuration
-        when(environment.getProperty("FUNCTIONAL_ACCOUNT")).thenReturn("anyString");
-        when(environment.getProperty("java.security.krb5.conf")).thenReturn("anyString");
-        when(environment.getProperty("oracle.net.kerberos5_cc_name")).thenReturn("anyString");
+        // Mock environment properties that would be used by the configuration
+        when(environment.getProperty("FUNCTIONAL_ACCOUNT")).thenReturn("functionalAccount");
+        when(environment.getProperty("java.security.krb5.conf")).thenReturn("krb5Conf");
+        when(environment.getProperty("oracle.net.kerberos5_cc_name")).thenReturn("kerberos5CcName");
 
-        // Mock the DataSource creation method
+        // Mock the DataSource creation method if it's defined within the class
         doReturn(dataSource).when(gosDatabaseConfiguration).createDataSource();
     }
 
@@ -116,7 +100,7 @@ class GOSDatabaseConfigurationTest {
 
     @Test
     void getNamedTemplateForGOS() {
-        // Assuming getNamedTemplateForGOS() returns namedParameterJdbcTemplate
+        // Mock the getNamedTemplateForGOS() method if needed
         when(gosDatabaseConfiguration.getNamedTemplateForGOS()).thenReturn(namedParameterJdbcTemplate);
 
         // Call the method under test
@@ -126,4 +110,5 @@ class GOSDatabaseConfigurationTest {
         assertSame(namedParameterJdbcTemplate, result);
     }
 }
+
 ```
