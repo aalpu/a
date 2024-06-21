@@ -38,12 +38,10 @@ print(info)
 
 ```
 ```
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
@@ -75,19 +73,14 @@ class CashMatchingCopyToAuditTaskletTest {
     @Mock
     private SimpleJdbcCall simpleJdbcCall;
 
-    @BeforeEach
-    void setUp() {
-        // Set up any required initialization before each test, if needed
-    }
-
     @Test
     void execute() throws Exception {
         // Mock behavior of getSimpleJdbcCall() to return the mock simpleJdbcCall
-        Mockito.when(cashMatchingCopyToAuditTasklet.getSimpleJdbcCall()).thenReturn(simpleJdbcCall);
+        when(cashMatchingCopyToAuditTasklet.getSimpleJdbcCall()).thenReturn(simpleJdbcCall);
 
         // Define behavior for the mocked SimpleJdbcCall
-        Mockito.when(simpleJdbcCall.withFunctionName("FUNC COPY CASHMATCHING TO AUDIT")).thenReturn(simpleJdbcCall);
-        Mockito.when(simpleJdbcCall.executeFunction(String.class)).thenReturn("expectedResult");
+        when(simpleJdbcCall.withFunctionName("FUNC COPY CASHMATCHING TO AUDIT")).thenReturn(simpleJdbcCall);
+        when(simpleJdbcCall.executeFunction(String.class)).thenReturn("expectedResult");
 
         // Call the method under test
         cashMatchingCopyToAuditTasklet.execute(stepContribution, chunkContext);
@@ -97,5 +90,6 @@ class CashMatchingCopyToAuditTaskletTest {
         verify(simpleJdbcCall).executeFunction(String.class);
     }
 }
+
 
 ```
