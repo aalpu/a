@@ -38,35 +38,64 @@ print(info)
 
 ```
 ```
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.core.env.StandardEnvironment;
+import org.springframework.batch.core.StepContribution;
+import org.springframework.batch.core.scope.context.ChunkContext;
+import org.springframework.core.env.Environment;
+import org.springframework.jdbc.core.simple.SimpleJdbcCall;
+
+import javax.sql.DataSource;
+
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class TradesettlementCashmatchingBatchApplicationTest {
+class CashMatchingCopyToAuditTaskletTest {
 
     @InjectMocks
-    private TradesettlementCashmatchingBatchApplication tradesettlementCashmatchingBatchApplication;
+    private CashMatchingCopyToAuditTasklet cashMatchingCopyToAuditTasklet;
 
     @Mock
-    private CashMatchingBatchService cashMatchingBatchService;
+    private StepContribution stepContribution;
 
     @Mock
-    private StandardEnvironment environment;
+    private DataSource gosDataSource;
+
+    @Mock
+    private Environment environment;
+
+    @Mock
+    private ChunkContext chunkContext;
+
+    @Mock
+    private SimpleJdbcCall simpleJdbcCall;
+
+    @BeforeEach
+    void setUp() {
+        // Set up any required initialization before each test, if needed
+    }
 
     @Test
-    public void test_TradesettlementCashmatchingBatchApplication() {
-        // Call the main method of the application class
-        tradesettlementCashmatchingBatchApplication.main(new String[0]);
+    void execute() throws Exception {
+        // Mock behavior of getSimpleJdbcCall() to return the mock simpleJdbcCall
+        Mockito.when(cashMatchingCopyToAuditTasklet.getSimpleJdbcCall()).thenReturn(simpleJdbcCall);
+
+        // Define behavior for the mocked SimpleJdbcCall
+        Mockito.when(simpleJdbcCall.withFunctionName("FUNC COPY CASHMATCHING TO AUDIT")).thenReturn(simpleJdbcCall);
+        Mockito.when(simpleJdbcCall.executeFunction(String.class)).thenReturn("expectedResult");
+
+        // Call the method under test
+        cashMatchingCopyToAuditTasklet.execute(stepContribution, chunkContext);
 
         // Verify interactions or assert results as needed
-        // For example, you can verify that certain methods in the CashMatchingBatchService are called
-        // verify(cashMatchingBatchService).someMethod();
+        verify(simpleJdbcCall).withFunctionName("FUNC COPY CASHMATCHING TO AUDIT");
+        verify(simpleJdbcCall).executeFunction(String.class);
     }
 }
-
 
 ```
