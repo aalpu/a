@@ -38,64 +38,42 @@ print(info)
 
 ```
 ```
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.Mockito;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.batch.core.StepContribution;
-import org.springframework.batch.core.scope.context.ChunkContext;
-import org.springframework.core.env.Environment;
-import org.springframework.jdbc.core.simple.SimpleJdbcCall;
-
-import javax.sql.DataSource;
-
-import static org.mockito.Mockito.*;
+import org.springframework.core.env.StandardEnvironment;
 
 @ExtendWith(MockitoExtension.class)
-class MarkUpdateWireAndReceivableTaskletTest {
+public class TradesettlementCashmatchingBatchApplicationTest {
 
     @InjectMocks
-    private MarkUpdateWireAndReceivableTasklet markUpdateWireAndReceivableTasklet;
+    private TradesettlementCashmatchingBatchApplication tradesettlementCashmatchingBatchApplication;
 
     @Mock
-    private StepContribution stepContribution;
+    private CashMatchingBatchService cashMatchingBatchService;
 
     @Mock
-    private ChunkContext chunkContext;
+    private StandardEnvironment environment;
 
-    @Mock
-    private DataSource gosDataSource;
-
-    @Mock
-    private Environment environment;
-
-    @Mock
-    private SimpleJdbcCall simpleJdbcCall;
-
-    @BeforeEach
-    void setUp() {
-        // Use a spy to allow partial mocking of the markUpdateWireAndReceivableTasklet instance
-        markUpdateWireAndReceivableTasklet = Mockito.spy(markUpdateWireAndReceivableTasklet);
-
-        // Mock the getSimpleJdbcCall method to return the mock simpleJdbcCall
-        doReturn(simpleJdbcCall).when(markUpdateWireAndReceivableTasklet).getSimpleJdbcCall();
-    }
+    @Captor
+    private ArgumentCaptor<String[]> stringArrayCaptor;
 
     @Test
-    void execute() throws Exception {
-        // Define behavior for the mocked SimpleJdbcCall
-        when(simpleJdbcCall.withFunctionName("FUNC_COPY_UPDATED_CASHMATCHING_TO_AUDIT")).thenReturn(simpleJdbcCall);
-        when(simpleJdbcCall.executeFunction(String.class)).thenReturn("expectedResult");
+    public void test_TradesettlementCashmatchingBatchApplication() {
+        // Mock any necessary behavior on cashMatchingBatchService or environment
 
-        // Call the method under test
-        markUpdateWireAndReceivableTasklet.execute(stepContribution, chunkContext);
+        // Use ArgumentCaptor to capture the arguments passed to main method
+        Mockito.doNothing().when(cashMatchingBatchService).someMethod();
+
+        // Call the main method of the application class
+        tradesettlementCashmatchingBatchApplication.main(new String[0]);
 
         // Verify interactions or assert results as needed
-        verify(simpleJdbcCall).withFunctionName("FUNC_COPY_UPDATED_CASHMATCHING_TO_AUDIT");
-        verify(simpleJdbcCall).executeFunction(String.class);
+        verify(cashMatchingBatchService).someMethod();
+
+        verify(environment, atLeastOnce()).getProperty("someProperty");
+
     }
 }
 
