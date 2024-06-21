@@ -38,42 +38,54 @@ print(info)
 
 ```
 ```
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.batch.core.StepContribution;
+import org.springframework.batch.core.scope.context.ChunkContext;
+import org.springframework.core.env.Environment;
+import org.springframework.jdbc.core.simple.SimpleJdbcCall;
+
+import javax.sql.DataSource;
+
+import static org.mockito.Mockito.*;
+
 @ExtendWith(MockitoExtension.class)
 class MarkUpdateWireAndeceivableTaskletTest {
-    @Tested
-    MarkUpdateWireAndeceivableTasklet markUpdateWireAndeceivableTasklet;
 
-    @Injectable
-    StepContribution stepContribution;
+    @InjectMocks
+    private MarkUpdateWireAndeceivableTasklet markUpdateWireAndeceivableTasklet;
 
-    @Injectable
-    ChunkContext chunkContext;
+    @Mock
+    private StepContribution stepContribution;
 
-    @Injectable
-    DataSource gosDataSource;
+    @Mock
+    private ChunkContext chunkContext;
 
-    @Injectable
-    Environment environment;
+    @Mock
+    private DataSource gosDataSource;
 
-    @Mocked
-    SimpleJdbcCall simpleJdbcCall;
+    @Mock
+    private Environment environment;
+
+    @Mock
+    private SimpleJdbcCall simpleJdbcCall;
 
     @Test
     void execute() throws Exception {
-        new Expectations() {{
-            markUpdateWireAndeceivableTasklet.getSimpleJdbcCall();
-            result = simpleJdbcCall;
+        // Arrange
+        when(markUpdateWireAndeceivableTasklet.getSimpleJdbcCall()).thenReturn(simpleJdbcCall);
+        when(simpleJdbcCall.withFunctionName("FUNC_COPY_UPDATED_CASHMATCHING_TO_AUDIT")).thenReturn(simpleJdbcCall);
+        when(simpleJdbcCall.executeFunction(String.class)).thenReturn("someString");
 
-            simpleJdbcCall.withFunctionName("FUNC_COPY_UPDATED_CASHMATCHING_TO_AUDIT");
-            result = simpleJdbcCall;
-
-            simpleJdbcCall.executeFunction(String.class);
-            result = anyString();
-        }};
-
+        // Act
         markUpdateWireAndeceivableTasklet.execute(stepContribution, chunkContext);
+
+        // Assert
+        verify(simpleJdbcCall).withFunctionName("FUNC_COPY_UPDATED_CASHMATCHING_TO_AUDIT");
+        verify(simpleJdbcCall).executeFunction(String.class);
     }
 }
-
-
 ```
