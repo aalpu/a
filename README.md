@@ -38,77 +38,21 @@ print(info)
 
 ```
 ```
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.core.env.Environment;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+Weekly Progress Report
 
-import javax.sql.DataSource;
+Java and Photon Migration of Trade Settlement Cash Matching Batch
+- Upgraded from Java 8 to Java 11 successfully.
+- Upgraded from Java 11 to Java 17 successfully.
+- Photon upgrade from 2.7 to 3.0 is in progress.
+- Fixed errors in JUnit test cases.
+- Wrote new test cases from scratch as the old ones did not work even with changes to annotations and code.
+- Raised a pull request for review.
 
-import static org.mockito.Mockito.*;
-
-@ExtendWith(MockitoExtension.class)
-class GOSDatabaseConfigurationTest {
-
-    @InjectMocks
-    private GOSDatabaseConfiguration gosDatabaseConfiguration;
-
-    @Mock
-    private Environment environment;
-
-    @Mock
-    private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
-
-    @Mock
-    private DataSource dataSource;
-
-    @BeforeEach
-    void setUp() {
-        // Use a spy to allow partial mocking of the gosDatabaseConfiguration instance
-        gosDatabaseConfiguration = Mockito.spy(new GOSDatabaseConfiguration());
-
-        // Mock environment properties that would be used by the configuration
-        when(environment.getProperty("FUNCTIONAL_ACCOUNT")).thenReturn("functionalAccount");
-        when(environment.getProperty("java.security.krb5.conf")).thenReturn("krb5Conf");
-        when(environment.getProperty("oracle.net.kerberos5_cc_name")).thenReturn("kerberos5CcName");
-
-        // Mock the DataSource creation method if it's defined within the class
-        doReturn(dataSource).when(gosDatabaseConfiguration).createDataSource();
-    }
-
-    @Test
-    void createGOSDatasource() {
-        // Call the method under test
-        DataSource result = gosDatabaseConfiguration.createGOSDatasource();
-
-        // Verify interactions with environment
-        verify(environment).getProperty("FUNCTIONAL_ACCOUNT");
-        verify(environment).getProperty("java.security.krb5.conf");
-        verify(environment).getProperty("oracle.net.kerberos5_cc_name");
-
-        // Verify that the createDataSource method was called and the result is the mocked dataSource
-        verify(gosDatabaseConfiguration).createDataSource();
-        assertSame(dataSource, result);
-    }
-
-    @Test
-    void getNamedTemplateForGOS() {
-        // Mock the getNamedTemplateForGOS() method if needed
-        when(gosDatabaseConfiguration.getNamedTemplateForGOS()).thenReturn(namedParameterJdbcTemplate);
-
-        // Call the method under test
-        NamedParameterJdbcTemplate result = gosDatabaseConfiguration.getNamedTemplateForGOS();
-
-        // Verify that the method returns the mocked namedParameterJdbcTemplate
-        assertSame(namedParameterJdbcTemplate, result);
-    }
-}
-
+L2: EPV ID Validation
+- Completed the Python script with new functions such as:
+  - Parsing the AppAudit.log file
+  - Dynamically generating commands for different servers
+  - Generating a report including password compression details
+- Tested the script on my local system with different test cases.
+- Gave an internal demo to the team and Hajira.
 ```
