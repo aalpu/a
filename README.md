@@ -38,6 +38,8 @@ print(info)
 
 ```
 ```
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -65,9 +67,6 @@ class GOSDatabaseConfigurationTest {
     private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
     @Mock
-    private SimpleJdbcCall simpleJdbcCall;
-
-    @Mock
     private DataSource dataSource;
 
     // Injecting properties
@@ -89,37 +88,42 @@ class GOSDatabaseConfigurationTest {
     @BeforeEach
     void setUp() {
         // Use a spy to allow partial mocking of the gosDatabaseConfiguration instance
-        gosDatabaseConfiguration = Mockito.spy(gosDatabaseConfiguration);
+        gosDatabaseConfiguration = Mockito.spy(new GOSDatabaseConfiguration());
 
-        // Mock the getSimpleJdbcCall method to return the mock simpleJdbcCall
-        Mockito.doReturn(simpleJdbcCall).when(gosDatabaseConfiguration).getSimpleJdbcCall();
+        // Mock the environment properties that would be used by the configuration
+        when(environment.getProperty("FUNCTIONAL_ACCOUNT")).thenReturn("anyString");
+        when(environment.getProperty("java.security.krb5.conf")).thenReturn("anyString");
+        when(environment.getProperty("oracle.net.kerberos5_cc_name")).thenReturn("anyString");
+
+        // Mock the DataSource creation method
+        doReturn(dataSource).when(gosDatabaseConfiguration).createDataSource();
     }
 
     @Test
     void createGOSDatasource() {
-        // Mock environment properties
-        Mockito.when(environment.getProperty("FUNCTIONAL_ACCOUNT")).thenReturn("anyString");
-        Mockito.when(environment.getProperty("java.security.krb5.conf")).thenReturn("anyString");
-        Mockito.when(environment.getProperty("oracle.net.kerberos5_cc_name")).thenReturn("anyString");
-
-        // Mock HikariDataSource creation
-        HikariDataSource mockDataSource = Mockito.mock(HikariDataSource.class);
-        Mockito.when(new HikariDataSource(Mockito.any(HikariConfig.class))).thenReturn(mockDataSource);
-
         // Call the method under test
-        gosDatabaseConfiguration.createGOSDatasource();
+        DataSource result = gosDatabaseConfiguration.createGOSDatasource();
 
-        // Verify interactions or assert results as needed
+        // Verify interactions with environment
         verify(environment).getProperty("FUNCTIONAL_ACCOUNT");
         verify(environment).getProperty("java.security.krb5.conf");
         verify(environment).getProperty("oracle.net.kerberos5_cc_name");
+
+        // Verify that the createDataSource method was called and the result is the mocked dataSource
+        verify(gosDatabaseConfiguration).createDataSource();
+        assertSame(dataSource, result);
     }
 
     @Test
     void getNamedTemplateForGOS() {
-        // Implement test case for getNamedTemplateForGOS if needed
-        // Example:
-        // gosDatabaseConfiguration.getNamedTemplateForGOS();
+        // Assuming getNamedTemplateForGOS() returns namedParameterJdbcTemplate
+        when(gosDatabaseConfiguration.getNamedTemplateForGOS()).thenReturn(namedParameterJdbcTemplate);
+
+        // Call the method under test
+        NamedParameterJdbcTemplate result = gosDatabaseConfiguration.getNamedTemplateForGOS();
+
+        // Verify that the method returns the mocked namedParameterJdbcTemplate
+        assertSame(namedParameterJdbcTemplate, result);
     }
 }
 ```
