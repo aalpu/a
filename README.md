@@ -45,58 +45,81 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.batch.core.StepContribution;
-import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.core.env.Environment;
-import org.springframework.jdbc.core.simple.SimpleJdbcCall;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import javax.sql.DataSource;
 
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class CashMatchingCopyToAuditTaskletTest {
+class GOSDatabaseConfigurationTest {
 
     @InjectMocks
-    private CashMatchingCopyToAuditTasklet cashMatchingCopyToAuditTasklet;
-
-    @Mock
-    private StepContribution stepContribution;
-
-    @Mock
-    private DataSource gosDataSource;
+    private GOSDatabaseConfiguration gosDatabaseConfiguration;
 
     @Mock
     private Environment environment;
 
     @Mock
-    private ChunkContext chunkContext;
+    private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
     @Mock
     private SimpleJdbcCall simpleJdbcCall;
 
+    @Mock
+    private DataSource dataSource;
+
+    // Injecting properties
+    @Mock
+    private long connectionTimeoutMs;
+
+    @Mock
+    private long idleTimeoutMs;
+
+    @Mock
+    private int maximumPoolSize;
+
+    @Mock
+    private int minimumIdle;
+
+    @Mock
+    private long maxLifetimeMs;
+
     @BeforeEach
     void setUp() {
-        // Use a spy to allow partial mocking of the cashMatchingCopyToAuditTasklet instance
-        cashMatchingCopyToAuditTasklet = Mockito.spy(cashMatchingCopyToAuditTasklet);
+        // Use a spy to allow partial mocking of the gosDatabaseConfiguration instance
+        gosDatabaseConfiguration = Mockito.spy(gosDatabaseConfiguration);
 
         // Mock the getSimpleJdbcCall method to return the mock simpleJdbcCall
-        Mockito.doReturn(simpleJdbcCall).when(cashMatchingCopyToAuditTasklet).getSimpleJdbcCall();
+        Mockito.doReturn(simpleJdbcCall).when(gosDatabaseConfiguration).getSimpleJdbcCall();
     }
 
     @Test
-    void execute() throws Exception {
-        // Define behavior for the mocked SimpleJdbcCall
-        Mockito.when(simpleJdbcCall.withFunctionName("FUNC COPY CASHMATCHING TO AUDIT")).thenReturn(simpleJdbcCall);
-        Mockito.when(simpleJdbcCall.executeFunction(String.class)).thenReturn("expectedResult");
+    void createGOSDatasource() {
+        // Mock environment properties
+        Mockito.when(environment.getProperty("FUNCTIONAL_ACCOUNT")).thenReturn("anyString");
+        Mockito.when(environment.getProperty("java.security.krb5.conf")).thenReturn("anyString");
+        Mockito.when(environment.getProperty("oracle.net.kerberos5_cc_name")).thenReturn("anyString");
+
+        // Mock HikariDataSource creation
+        HikariDataSource mockDataSource = Mockito.mock(HikariDataSource.class);
+        Mockito.when(new HikariDataSource(Mockito.any(HikariConfig.class))).thenReturn(mockDataSource);
 
         // Call the method under test
-        cashMatchingCopyToAuditTasklet.execute(stepContribution, chunkContext);
+        gosDatabaseConfiguration.createGOSDatasource();
 
         // Verify interactions or assert results as needed
-        verify(simpleJdbcCall).withFunctionName("FUNC COPY CASHMATCHING TO AUDIT");
-        verify(simpleJdbcCall).executeFunction(String.class);
+        verify(environment).getProperty("FUNCTIONAL_ACCOUNT");
+        verify(environment).getProperty("java.security.krb5.conf");
+        verify(environment).getProperty("oracle.net.kerberos5_cc_name");
+    }
+
+    @Test
+    void getNamedTemplateForGOS() {
+        // Implement test case for getNamedTemplateForGOS if needed
+        // Example:
+        // gosDatabaseConfiguration.getNamedTemplateForGOS();
     }
 }
-
 ```
