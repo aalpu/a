@@ -38,69 +38,7 @@ print(info)
 
 ```
 ```
-Certainly! Below are different test cases for the given code. These test cases cover various scenarios, including normal operation, edge cases, and error conditions.
-
-### Test Cases
-
-#### Test Case 1: Successful Password Fetch and Store
-**Test Case Description**: Verify that the script correctly parses the `AppAudit.log`, generates the correct command, fetches the password, and stores it in the password file.
-**Expected Result**: Password is successfully stored in the `EPV_Password.txt` file along with the server name.
-
-#### Test Case 2: AppAudit.log File Not Found
-**Test Case Description**: Verify the script's behavior when the `AppAudit.log` file is not found at the specified location.
-**Expected Result**: The script should raise a `FileNotFoundError` and print an appropriate error message.
-
-#### Test Case 3: Invalid Log Format
-**Test Case Description**: Verify the script's behavior when the `AppAudit.log` file does not match the expected format.
-**Expected Result**: The script should print "Failed to parse AppAudit.log" and not proceed further.
-
-#### Test Case 4: Command Execution Fails
-**Test Case Description**: Verify the script's behavior when the command execution in CMD does not produce the expected output.
-**Expected Result**: The script should print "Failed to retrieve password from the command output" and not proceed further.
-
-#### Test Case 5: Password File Less Than 8 Entries
-**Test Case Description**: Verify that the script correctly stores the password when the `EPV_Password.txt` file has fewer than 8 entries.
-**Expected Result**: Password is appended to the `EPV_Password.txt` file without generating a report.
-
-#### Test Case 6: Password File Reaches 8 Entries with Matching Passwords
-**Test Case Description**: Verify that the script correctly generates a report when the `EPV_Password.txt` file reaches 8 entries, and all passwords match.
-**Expected Result**: A report is generated stating that all server passwords match, and the `EPV_Password.txt` file is cleared.
-
-#### Test Case 7: Password File Reaches 8 Entries with Mismatched Passwords
-**Test Case Description**: Verify that the script correctly generates a report when the `EPV_Password.txt` file reaches 8 entries, and there are mismatched passwords.
-**Expected Result**: A report is generated listing the server names with mismatched passwords, and the `EPV_Password.txt` file is cleared.
-
-#### Test Case 8: Empty Password File
-**Test Case Description**: Verify the script's behavior when the `EPV_Password.txt` file is initially empty.
-**Expected Result**: Password is successfully stored in the `EPV_Password.txt` file along with the server name.
-
-#### Test Case 9: Report Generation Includes Date and Time
-**Test Case Description**: Verify that the generated report includes the date and time when it was generated.
-**Expected Result**: The report contains the current date and time in the specified format.
-
-#### Test Case 10: Command Output with Less Than Two Lines
-**Test Case Description**: Verify the script's behavior when the command output in CMD has fewer than two lines.
-**Expected Result**: The script should print "Failed to retrieve password from the command output" and not proceed further.
-
-#### Test Case 11: Command Execution with Special Characters in Password
-**Test Case Description**: Verify the script's behavior when the command output includes special characters in the password.
-**Expected Result**: Password with special characters is successfully stored and compared.
-
-### Summary of Test Cases
-
-1. **Successful Password Fetch and Store**: Password is correctly stored.
-2. **AppAudit.log File Not Found**: Raises `FileNotFoundError`.
-3. **Invalid Log Format**: Prints parsing failure message.
-4. **Command Execution Fails**: Prints command execution failure message.
-5. **Password File Less Than 8 Entries**: Password appended without report.
-6. **Password File Reaches 8 Entries with Matching Passwords**: Generates matching passwords report.
-7. **Password File Reaches 8 Entries with Mismatched Passwords**: Generates mismatched passwords report.
-8. **Empty Password File**: Password successfully stored.
-9. **Report Generation Includes Date and Time**: Report contains date and time.
-10. **Command Output with Less Than Two Lines**: Prints command output failure message.
-11. **Command Execution with Special Characters in Password**: Password with special characters stored and compared.
-
-These test cases provide comprehensive coverage of the script’s functionality and handle various edge cases and error scenarios.
+(https://sequencediagram.org/index.html#initialData=C4S2BsFMAIEEFdgHsC2BDYMAKaDOuB3JAJwBNoAxSYAYwAto0A7cgYVQAc1iRckmAUALQ1kxaAFVckYgK7FQNEFybBoAZRo8OwOd0XLmagPLq9CkEpVrWAWQAi5g9cogo6gJ65MKAVJkAtAB8mtrAAFzQAErwTNC4IEwA5lAA+tLEAG4yABQAlAKhysDBFG6Qnt6QKJGsdJA0ANbQIABmcBwcCKRgAHTgSEnQkAAevMC4wuBqsJ3dfQNDo+OT0GsaWsWl5ZU+kVGQaOStIMTe0OCJMEjts13wPcD9gwLrG2HBRTqROGcwd-MnotXus0NNoAAZQbQVokdBqTJgkCkEFvNZfEohTbfaCsYiHTDQLj4IhkaA0VDoFiotEY4KmSLGDiQOJ2Rxo9amYJsxnM1kOGlvOlBHnQAByaEyICSGBgyA09gA0tAevjRCQPIL1sLRQBREYNRAwYmEEjkCkoKkojlrNmfbERaDGRAcRDQfG4eDTLXoh32sKRfXAYgiNQm0nHYioaBIF2IH3vLZBMruLx7XH1JqMFjxMTGvCmsgJlMVNPVbapqo1aKHci6rAANV6wBGuhtjHBEMg+GgwDozGgAA5hqoeN2E28S7ty8mdmXq3cWeQmJACESCxGR8HNe3IOBpEOt2PVu3tX6sQHoABxFkyWXuyAcEht0++j6zyvp1hQbjQetNlsX1fYUp3nSIAHUeEJfEnwUXskAfWCnkAhMlxpPcDyhIZYWIeEWiYRFLmtG1hX8Ygfh4VRoAAIgoNBynIeV5APAEHgWQZqPQ6kMP+OY2KBaFSCQbtoCYJA1GWbwaVIjIKMSNRqNYx5niGXhRPExhETcNAACMoEYNQ+xgAYaAwEB+E4tCgA)
 
 
 
