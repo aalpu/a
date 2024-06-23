@@ -38,231 +38,70 @@ print(info)
 
 ```
 ```
+Certainly! Below are different test cases for the given code. These test cases cover various scenarios, including normal operation, edge cases, and error conditions.
 
-import pyautogui
-import time
-import pyperclip
-import re
-import os
-import socket
-from datetime import datetime
+### Test Cases
 
-def parse_app_audit_log(log_path):
-    """
-    Parses the first line of the AppAudit.log to extract values for creating the command.
-    
-    Args:
-    log_path (str): The path to the AppAudit.log file.
-    
-    Returns:
-    tuple: Extracted values (AppID, safe, folder, name) from the log.
-    """
-    if not os.path.exists(log_path):
-        raise FileNotFoundError(f"AppAudit.log is not available at the location: {log_path}")
-    
-    with open(log_path, 'r') as file:
-        first_line = file.readline().strip()
+#### Test Case 1: Successful Password Fetch and Store
+**Test Case Description**: Verify that the script correctly parses the `AppAudit.log`, generates the correct command, fetches the password, and stores it in the password file.
+**Expected Result**: Password is successfully stored in the `EPV_Password.txt` file along with the server name.
 
-    # Print the first line for debugging purposes
-    print(f"First line from log: {first_line}")
+#### Test Case 2: AppAudit.log File Not Found
+**Test Case Description**: Verify the script's behavior when the `AppAudit.log` file is not found at the specified location.
+**Expected Result**: The script should raise a `FileNotFoundError` and print an appropriate error message.
 
-    # Improved regex pattern to match the line structure
-    match = re.search(
-        r'Provider.*?has successfully fetched password \[safe\s*=\s*(.*?), folder\s*=\s*(.*?), name\s*=\s*(.*?)\] .*?for application \[(.*?)\]', 
-        first_line
-    )
+#### Test Case 3: Invalid Log Format
+**Test Case Description**: Verify the script's behavior when the `AppAudit.log` file does not match the expected format.
+**Expected Result**: The script should print "Failed to parse AppAudit.log" and not proceed further.
 
-    if match:
-        safe = match.group(1).strip()
-        folder = match.group(2).strip()
-        name = match.group(3).strip()
-        app_id = match.group(4).strip()
+#### Test Case 4: Command Execution Fails
+**Test Case Description**: Verify the script's behavior when the command execution in CMD does not produce the expected output.
+**Expected Result**: The script should print "Failed to retrieve password from the command output" and not proceed further.
 
-        # Print extracted values for debugging purposes
-        print(f"Extracted values: AppID={app_id}, Safe={safe}, Folder={folder}, Name={name}")
-        return app_id, safe, folder, name
-    else:
-        # Print error message for debugging purposes
-        print(f"No match found in log: {first_line}")
-        return None, None, None, None
+#### Test Case 5: Password File Less Than 8 Entries
+**Test Case Description**: Verify that the script correctly stores the password when the `EPV_Password.txt` file has fewer than 8 entries.
+**Expected Result**: Password is appended to the `EPV_Password.txt` file without generating a report.
 
-def create_password_command(app_id, safe, folder, name):
-    """
-    Creates the command to fetch the password based on the extracted values.
-    
-    Args:
-    app_id (str): The application ID.
-    safe (str): The safe value.
-    folder (str): The folder value.
-    name (str): The object name.
-    
-    Returns:
-    str: The constructed command.
-    """
-    command = f'PasswordSDK GetPassword /p AppDeses.AppID="{app_id}" /p Query="safe={safe}; folder={folder}; Object={name}" /o Password'
-    return command
+#### Test Case 6: Password File Reaches 8 Entries with Matching Passwords
+**Test Case Description**: Verify that the script correctly generates a report when the `EPV_Password.txt` file reaches 8 entries, and all passwords match.
+**Expected Result**: A report is generated stating that all server passwords match, and the `EPV_Password.txt` file is cleared.
 
-def execute_command_and_get_password(command):
-    """
-    Executes the command in CMD and fetches the password from the output.
-    
-    Args:
-    command (str): The command to be executed.
-    
-    Returns:
-    str: The extracted password from the command output.
-    """
-    # Open CMD
-    pyautogui.press('win')
-    time.sleep(1)
-    pyautogui.write('cmd')
-    time.sleep(1)
-    pyautogui.press('enter')
-    time.sleep(2)
-    
-    # Navigate to the SDK directory
-    sdk_directory_command = 'cd /d D:\\Program Files (x86)\\CyberArk\\ApplicationPasswordSdk'
-    pyautogui.write(sdk_directory_command)
-    pyautogui.press('enter')
-    time.sleep(1)
-    
-    # Run the password command
-    pyautogui.write(command)
-    pyautogui.press('enter')
-    time.sleep(3)
-    
-    # Copy the command output
-    pyautogui.hotkey('ctrl', 'a')
-    time.sleep(1)
-    pyautogui.hotkey('ctrl', 'c')
-    time.sleep(1)
-    output = pyperclip.paste()
+#### Test Case 7: Password File Reaches 8 Entries with Mismatched Passwords
+**Test Case Description**: Verify that the script correctly generates a report when the `EPV_Password.txt` file reaches 8 entries, and there are mismatched passwords.
+**Expected Result**: A report is generated listing the server names with mismatched passwords, and the `EPV_Password.txt` file is cleared.
 
-    # Print the output for debugging purposes
-    print(f"Command output: {output}")
+#### Test Case 8: Empty Password File
+**Test Case Description**: Verify the script's behavior when the `EPV_Password.txt` file is initially empty.
+**Expected Result**: Password is successfully stored in the `EPV_Password.txt` file along with the server name.
 
-    # Extract the password from the second last line of the output
-    output_lines = output.splitlines()
-    if len(output_lines) >= 2:
-        password = output_lines[-2].strip()  # Assuming the password is in the second last line
-    else:
-        password = None
+#### Test Case 9: Report Generation Includes Date and Time
+**Test Case Description**: Verify that the generated report includes the date and time when it was generated.
+**Expected Result**: The report contains the current date and time in the specified format.
 
-    return password
+#### Test Case 10: Command Output with Less Than Two Lines
+**Test Case Description**: Verify the script's behavior when the command output in CMD has fewer than two lines.
+**Expected Result**: The script should print "Failed to retrieve password from the command output" and not proceed further.
 
-def check_and_store_password(server_name, password, password_file_path):
-    """
-    Checks if the password file contains 8 entries and compares the passwords.
-    
-    Args:
-    server_name (str): The server name.
-    password (str): The password to check or store.
-    password_file_path (str): The path to the password file.
-    
-    Returns:
-    None
-    """
-    password_entry = f"{server_name}={password}"
-    
-    if not os.path.exists(password_file_path):
-        with open(password_file_path, 'w') as file:
-            file.write(password_entry + '\n')
-        return  # Password was stored as the file was empty
-    else:
-        with open(password_file_path, 'r+') as file:
-            existing_passwords = [line.strip() for line in file.readlines()]
-            
-            # If there are less than 8 entries, add the new password entry
-            if len(existing_passwords) < 8:
-                file.write(password_entry + '\n')
-            else:
-                # If there are already 8 entries, compare passwords and generate a report
-                file.seek(0)
-                file.write(password_entry + '\n')
-                file.truncate()
-                generate_report(password_file_path)
-                # Clear the password file
-                file.seek(0)
-                file.truncate()
+#### Test Case 11: Command Execution with Special Characters in Password
+**Test Case Description**: Verify the script's behavior when the command output includes special characters in the password.
+**Expected Result**: Password with special characters is successfully stored and compared.
 
-def generate_report(password_file_path):
-    """
-    Generates a report based on the password comparison result.
-    
-    Args:
-    password_file_path (str): The path to the password file.
-    
-    Returns:
-    None
-    """
-    with open(password_file_path, 'r') as file:
-        existing_passwords = [line.strip() for line in file.readlines()]
-        
-    if not existing_passwords:
-        return
+### Summary of Test Cases
 
-    existing_password = existing_passwords[0].split('=')[1]
-    mismatches = [entry for entry in existing_passwords if entry.split('=')[1] != existing_password]
+1. **Successful Password Fetch and Store**: Password is correctly stored.
+2. **AppAudit.log File Not Found**: Raises `FileNotFoundError`.
+3. **Invalid Log Format**: Prints parsing failure message.
+4. **Command Execution Fails**: Prints command execution failure message.
+5. **Password File Less Than 8 Entries**: Password appended without report.
+6. **Password File Reaches 8 Entries with Matching Passwords**: Generates matching passwords report.
+7. **Password File Reaches 8 Entries with Mismatched Passwords**: Generates mismatched passwords report.
+8. **Empty Password File**: Password successfully stored.
+9. **Report Generation Includes Date and Time**: Report contains date and time.
+10. **Command Output with Less Than Two Lines**: Prints command output failure message.
+11. **Command Execution with Special Characters in Password**: Password with special characters stored and compared.
 
-    now = datetime.now()
-    formatted_date = now.strftime("%Y-%m-%d %H:%M:%S")
+These test cases provide comprehensive coverage of the script’s functionality and handle various edge cases and error scenarios.
 
-    report = (
-        "Password Comparison Report\n"
-        "==========================\n"
-        f"Report generated on: {formatted_date}\n\n"
-        "Summary:\n"
-    )
-    
-    if not mismatches:
-        report += "All server passwords match.\n\n"
-    else:
-        report += "Password mismatch found in the following servers:\n\n"
-        for mismatch in mismatches:
-            report += f"{mismatch.split('=')[0]}\n"
-
-    with open('report.txt', 'w') as report_file:
-        report_file.write(report)
-    
-    print('Report generated: report.txt')
-
-def automate_single_server():
-    """
-    Automates the process for a single server to extract the password and compare it.
-    """
-    # Define the path to the AppAudit.log file
-    log_file_path = r'D:\Program Files (x86)\CyberArk\ApplicationPasswordProvider\Logs\AppAudit.log'
-    
-    try:
-        # Parse the AppAudit.log for values to create the command
-        app_id, safe, folder, name = parse_app_audit_log(log_file_path)
-        if not all([app_id, safe, folder, name]):
-            print(f'Failed to parse AppAudit.log')
-            return
-
-        # Create the command
-        command = create_password_command(app_id, safe, folder, name)
-        
-        # Run the command and get the password
-        password = execute_command_and_get_password(command)
-        if not password:
-            print(f'Failed to retrieve password from the command output')
-            return
-        
-        # Get the server name
-        server_name = socket.gethostname()
-        
-        # Define the path to the password file
-        password_file_path = r'\\Network\isaan01102\temp\EPV_Password.txt'
-        
-        # Check and store the password
-        check_and_store_password(server_name, password, password_file_path)
-    except FileNotFoundError as e:
-        print(e)
-
-# Main function
-if __name__ == "__main__":
-    automate_single_server()
 
 
 ```
