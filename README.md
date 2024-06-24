@@ -1,31 +1,97 @@
 ```
+   import mockit.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.JobInstance;
+import org.springframework.batch.core.StepExecution;
+import org.springframework.core.env.Environment;
+import java.time.LocalDateTime;
+import java.util.Collections;
+
+public class CashMatchingAuditBatchListenerTest {
+
+    @Tested
+    private CashMatchingAuditBatchListener listener;
+
+    @Injectable
+    private GosDAO gosDAO;
+
+    @Injectable
+    private Environment environment;
+
+    private JobExecution jobExecution;
+
+    @BeforeEach
+    public void setUp() {
+        jobExecution = new JobExecution(1L);
+        JobInstance jobInstance = new JobInstance(1L, "TestJob");
+        jobExecution.setJobInstance(jobInstance);
+        
+        new Expectations() {{
+            environment.getProperty("time.zone"); result = "America/New_York";
+        }};
+    }
+
     @Test
-    public void testAfterJobWithNonNullLastUpdated(@Injectable BatchControl batchControl, @Injectable StepExecution stepExecution) {
-        Date lastUpdated = new Date();
+    public void testAfterJobSuccessfulExecution(@Injectable BatchControl batchControl) {
         LocalDateTime now = LocalDateTime.now();
+        jobExecution.setStartTime(now);
+        jobExecution.setEndTime(now.plusMinutes(5));
+        jobExecution.setLastUpdated(now.plusMinutes(5));
+
+        StepExecution stepExecution = new StepExecution("TestStep", jobExecution);
+        jobExecution.addStepExecutions(Collections.singletonList(stepExecution));
 
         new Expectations() {{
             gosDAO.getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT); result = batchControl;
-            jobExecution.getStepExecutions(); result = List.of(stepExecution);
-            stepExecution.getFailureExceptions(); result = Collections.emptyList();
-            stepExecution.getStartTime(); result = Date.from(now.toInstant(ZoneOffset.UTC));
-            stepExecution.getEndTime(); result = Date.from(now.plusSeconds(5).toInstant(ZoneOffset.UTC));
-            jobExecution.getLastUpdated(); result = lastUpdated;
-            environment.getProperty("time.zone"); result = "America/New_York";
         }};
 
         listener.afterJob(jobExecution);
 
         new Verifications() {{
-            batchControl.setJobName("TestJob"); times = 1;
-            batchControl.setStatus(BatchStatusEnum.COMPLETED); times = 1;
-            batchControl.setUpdatedDate(withInstanceOf(LocalDateTime.class)); times = 1;
-            gosDAO.insertUpdateBatchStatus(batchControl); times = 1;
-            stepExecution.getFailureExceptions(); times = 1;
+            gosDAO.getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT);
+            gosDAO.insertUpdateBatchStatus(withCapture());
+        }};
+
+        new Assertions() {{
+            BatchControl capturedBatchControl = withCapture(new BatchControl());
+            assertEquals("TestJob", capturedBatchControl.getJobName());
+            assertEquals(BatchStatusEnum.COMPLETED, capturedBatchControl.getStatus());
+            assertNotNull(capturedBatchControl.getUpdatedDate());
         }};
     }
 
+    @Test
+    public void testAfterJobFailedExecution(@Injectable BatchControl batchControl) {
+        LocalDateTime now = LocalDateTime.now();
+        jobExecution.setStartTime(now);
+        jobExecution.setEndTime(now.plusMinutes(5));
+        jobExecution.setLastUpdated(now.plusMinutes(5));
 
+        StepExecution stepExecution = new StepExecution("TestStep", jobExecution);
+        stepExecution.addFailureException(new RuntimeException("Test exception"));
+        jobExecution.addStepExecutions(Collections.singletonList(stepExecution));
+
+        new Expectations() {{
+            gosDAO.getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT); result = batchControl;
+        }};
+
+        listener.afterJob(jobExecution);
+
+        new Verifications() {{
+            gosDAO.getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT);
+            gosDAO.insertUpdateBatchStatus(withCapture());
+        }};
+
+        new Assertions() {{
+            BatchControl capturedBatchControl = withCapture(new BatchControl());
+            assertEquals("TestJob", capturedBatchControl.getJobName());
+            assertEquals(BatchStatusEnum.FAILED, capturedBatchControl.getStatus());
+            assertNotNull(capturedBatchControl.getUpdatedDate());
+        }};
+    }
+}
 
 ```
 
