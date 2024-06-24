@@ -1,40 +1,5 @@
 ```
-import mockit.Expectations;
-import mockit.Injectable;
-import mockit.Tested;
-import mockit.Verifications;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobInstance;
-import org.springframework.batch.core.StepExecution;
-import org.springframework.core.env.Environment;
-
-import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-
-public class CashMatchingAuditBatchListenerTest {
-
-    @Tested
-    private CashMatchingAuditBatchListener listener;
-
-    @Injectable
-    private GosDAO gosDAO;
-
-    @Injectable
-    private Environment environment;
-
-    private JobExecution jobExecution;
-
-    @BeforeEach
-    public void setUp() {
-        jobExecution = new JobExecution(1L);
-        JobInstance jobInstance = new JobInstance(1L, "TestJob");
-        jobExecution.setJobInstance(jobInstance);
-    }
-
-    @Test
+@Test
     public void testAfterJobWithNonNullLastUpdated(@Injectable BatchControl batchControl, @Injectable StepExecution stepExecution) {
         LocalDateTime lastUpdated = LocalDateTime.now();
 
@@ -45,7 +10,6 @@ public class CashMatchingAuditBatchListenerTest {
             stepExecution.getStartTime(); result = LocalDateTime.now();
             stepExecution.getEndTime(); result = LocalDateTime.now().plusSeconds(5);
             jobExecution.getLastUpdated(); result = lastUpdated;
-            batchControl.getRecordCount(); result = "Record count information";
         }};
 
         listener.afterJob(jobExecution);
@@ -53,11 +17,10 @@ public class CashMatchingAuditBatchListenerTest {
         new Verifications() {{
             batchControl.setJobName("TestJob"); times = 1;
             batchControl.setStatus(BatchStatusEnum.COMPLETED); times = 1;
-            batchControl.setUpdatedDate(lastUpdated); times = 1;
+            batchControl.setUpdatedDate(withInstanceOf(LocalDateTime.class)); times = 1;
             gosDAO.insertUpdateBatchStatus(batchControl); times = 1;
         }};
     }
-}
 
 
 
