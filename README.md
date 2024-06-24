@@ -40,8 +40,7 @@ public class CashMatchingAuditBatchListenerTest {
     }
 
     @Test
-    public void testAfterJob(@Injectable BatchControl batchControl, @Injectable StepExecution stepExecution) {
-        // Mocking jobExecution.getLastUpdated() to return a non-null value
+    public void testAfterJobWithNonNullLastUpdated(@Injectable BatchControl batchControl, @Injectable StepExecution stepExecution) {
         LocalDateTime lastUpdated = LocalDateTime.now();
         new Expectations() {{
             gosDAO.getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT); result = batchControl;
@@ -58,11 +57,34 @@ public class CashMatchingAuditBatchListenerTest {
         new Verifications() {{
             batchControl.setJobName("TestJob"); times = 1;
             batchControl.setStatus(BatchStatusEnum.getBatchStatusFromString("COMPLETED")); times = 1;
-            batchControl.setUpdatedDate(withInstanceOf(LocalDateTime.class)); times = 1; // Ensure setUpdatedDate is called with a LocalDateTime instance
+            batchControl.setUpdatedDate(lastUpdated); times = 1;
+            gosDAO.insertUpdateBatchStatus(batchControl); times = 1;
+        }};
+    }
+
+    @Test
+    public void testAfterJobWithNullLastUpdated(@Injectable BatchControl batchControl, @Injectable StepExecution stepExecution) {
+        new Expectations() {{
+            gosDAO.getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT); result = batchControl;
+            stepExecution.getFailureExceptions(); result = Collections.emptyList();
+            stepExecution.getStartTime(); result = LocalDateTime.now();
+            stepExecution.getEndTime(); result = LocalDateTime.now().plusSeconds(5);
+            jobExecution.getStepExecutions(); result = List.of(stepExecution);
+            jobExecution.getStatus().toString(); result = "COMPLETED";
+            jobExecution.getLastUpdated(); result = null;
+        }};
+
+        listener.afterJob(jobExecution);
+
+        new Verifications() {{
+            batchControl.setJobName("TestJob"); times = 1;
+            batchControl.setStatus(BatchStatusEnum.getBatchStatusFromString("COMPLETED")); times = 1;
+            batchControl.setUpdatedDate(withNull()); times = 1; // Expect setUpdatedDate to be called with null when getLastUpdated() returns null
             gosDAO.insertUpdateBatchStatus(batchControl); times = 1;
         }};
     }
 }
+
 
 ```
 
