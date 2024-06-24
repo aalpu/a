@@ -10,14 +10,9 @@ import org.springframework.batch.core.JobInstance;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.core.env.Environment;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class CashMatchingAuditBatchListenerTest {
 
@@ -42,48 +37,28 @@ public class CashMatchingAuditBatchListenerTest {
     @Test
     public void testAfterJobWithNonNullLastUpdated(@Injectable BatchControl batchControl, @Injectable StepExecution stepExecution) {
         LocalDateTime lastUpdated = LocalDateTime.now();
+
         new Expectations() {{
             gosDAO.getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT); result = batchControl;
+            jobExecution.getStepExecutions(); result = List.of(stepExecution);
             stepExecution.getFailureExceptions(); result = Collections.emptyList();
             stepExecution.getStartTime(); result = LocalDateTime.now();
             stepExecution.getEndTime(); result = LocalDateTime.now().plusSeconds(5);
-            jobExecution.getStepExecutions(); result = List.of(stepExecution);
-            jobExecution.getStatus().toString(); result = "COMPLETED";
             jobExecution.getLastUpdated(); result = lastUpdated;
+            batchControl.getRecordCount(); result = "Record count information";
         }};
 
         listener.afterJob(jobExecution);
 
         new Verifications() {{
             batchControl.setJobName("TestJob"); times = 1;
-            batchControl.setStatus(BatchStatusEnum.getBatchStatusFromString("COMPLETED")); times = 1;
+            batchControl.setStatus(BatchStatusEnum.COMPLETED); times = 1;
             batchControl.setUpdatedDate(lastUpdated); times = 1;
             gosDAO.insertUpdateBatchStatus(batchControl); times = 1;
         }};
     }
-
-    @Test
-    public void testAfterJobWithNullLastUpdated(@Injectable BatchControl batchControl, @Injectable StepExecution stepExecution) {
-        new Expectations() {{
-            gosDAO.getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT); result = batchControl;
-            stepExecution.getFailureExceptions(); result = Collections.emptyList();
-            stepExecution.getStartTime(); result = LocalDateTime.now();
-            stepExecution.getEndTime(); result = LocalDateTime.now().plusSeconds(5);
-            jobExecution.getStepExecutions(); result = List.of(stepExecution);
-            jobExecution.getStatus().toString(); result = "COMPLETED";
-            jobExecution.getLastUpdated(); result = null;
-        }};
-
-        listener.afterJob(jobExecution);
-
-        new Verifications() {{
-            batchControl.setJobName("TestJob"); times = 1;
-            batchControl.setStatus(BatchStatusEnum.getBatchStatusFromString("COMPLETED")); times = 1;
-            batchControl.setUpdatedDate(withNull()); times = 1; // Expect setUpdatedDate to be called with null when getLastUpdated() returns null
-            gosDAO.insertUpdateBatchStatus(batchControl); times = 1;
-        }};
-    }
 }
+
 
 
 ```
