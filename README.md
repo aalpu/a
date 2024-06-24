@@ -12,9 +12,9 @@ import org.springframework.core.env.Environment;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Collections;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -55,16 +55,21 @@ class CashMatchingAuditBatchListenerTest {
         verify(batchControl, times(1)).setStatus(BatchStatusEnum.RUNNING);
         verify(batchControl, times(1)).setUpdatedBy("testUser");
         verify(batchControl, times(1)).setCreatedBy("testUser");
-        verify(batchControl, times(2)).setUpdatedDate(any(LocalDateTime.class));
-        verify(batchControl, times(2)).setCreatedDate(any(LocalDateTime.class));
+        verify(batchControl, times(1)).setUpdatedDate(any(LocalDateTime.class));
+        verify(batchControl, times(1)).setCreatedDate(any(LocalDateTime.class));
         verify(gosDAO, times(1)).insertUpdateBatchStatus(batchControl);
     }
 
     @Test
     void testAfterJob() {
         StepExecution stepExecution = mock(StepExecution.class);
+        LocalDateTime startTime = LocalDateTime.now();
+        LocalDateTime endTime = startTime.plusMinutes(5);
+
         when(jobExecution.getStepExecutions()).thenReturn(Collections.singletonList(stepExecution));
         when(stepExecution.getFailureExceptions()).thenReturn(Collections.emptyList());
+        when(stepExecution.getStartTime()).thenReturn(ZonedDateTime.of(startTime, ZoneId.systemDefault()).toInstant());
+        when(stepExecution.getEndTime()).thenReturn(ZonedDateTime.of(endTime, ZoneId.systemDefault()).toInstant());
 
         listener.afterJob(jobExecution);
 
@@ -75,7 +80,6 @@ class CashMatchingAuditBatchListenerTest {
         verify(gosDAO, times(1)).insertUpdateBatchStatus(batchControl);
     }
 }
-
 
 ```
 
