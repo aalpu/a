@@ -1,23 +1,21 @@
 ```
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.*;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.slf4j.Logger;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobInstance;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.core.env.Environment;
 
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
 class CashMatchingAuditBatchListenerTest {
 
     @InjectMocks
@@ -35,52 +33,86 @@ class CashMatchingAuditBatchListenerTest {
     @Mock
     private JobInstance jobInstance;
 
-    @Mock
-    private BatchControl batchControl;
-
     @BeforeEach
     void setUp() {
-        when(jobExecution.getJobInstance()).thenReturn(jobInstance);
-        when(jobInstance.getJobName()).thenReturn("testJob");
-        when(gosDAO.getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT)).thenReturn(batchControl);
-        when(environment.getProperty("FUNCTIONAL_ACCOUNT")).thenReturn("testUser");
+        MockitoAnnotations.openMocks(this);
     }
 
     @Test
     void testBeforeJob() {
+        BatchControl batchControl = new BatchControl();
+        when(gosDAO.getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT)).thenReturn(batchControl);
+        when(jobExecution.getJobInstance()).thenReturn(jobInstance);
+        when(jobInstance.getJobName()).thenReturn("testJob");
+        when(environment.getProperty("FUNCTIONAL_ACCOUNT")).thenReturn("testUser");
+
         listener.beforeJob(jobExecution);
 
-        verify(gosDAO, times(1)).getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT);
-        verify(batchControl, times(1)).setJobName("testJob");
-        verify(batchControl, times(1)).setStatus(BatchStatusEnum.RUNNING);
-        verify(batchControl, times(1)).setUpdatedBy("testUser");
-        verify(batchControl, times(1)).setCreatedBy("testUser");
-        verify(batchControl, times(1)).setUpdatedDate(any(LocalDateTime.class));
-        verify(batchControl, times(1)).setCreatedDate(any(LocalDateTime.class));
-        verify(gosDAO, times(1)).insertUpdateBatchStatus(batchControl);
+        verify(gosDAO).getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT);
+        verify(gosDAO).insertUpdateBatchStatus(batchControl);
+        verify(environment).getProperty("FUNCTIONAL_ACCOUNT");
+        
+        assertEquals("testJob", batchControl.getJobName());
+        assertEquals(BatchStatusEnum.RUNNING, batchControl.getStatus());
+        assertEquals("testUser", batchControl.getUpdatedBy());
+        assertEquals("testUser", batchControl.getCreatedBy());
     }
 
     @Test
     void testAfterJob() {
-        StepExecution stepExecution = mock(StepExecution.class);
-        LocalDateTime startTime = LocalDateTime.now();
-        LocalDateTime endTime = startTime.plusMinutes(5);
+        BatchControl batchControl = new BatchControl();
+        when(gosDAO.getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT)).thenReturn(batchControl);
+        when(jobExecution.getJobInstance()).thenReturn(jobInstance);
+        when(jobInstance.getJobName()).thenReturn("testJob");
+        when(jobInstance.getInstanceId()).thenReturn(1L);
+        when(jobExecution.getStatus()).thenReturn(org.springframework.batch.core.BatchStatus.COMPLETED);
+        when(jobExecution.getLastUpdated()).thenReturn(new Date());
 
-        when(jobExecution.getStepExecutions()).thenReturn(Collections.singletonList(stepExecution));
-        when(stepExecution.getFailureExceptions()).thenReturn(Collections.emptyList());
-        when(stepExecution.getStartTime()).thenReturn(ZonedDateTime.of(startTime, ZoneId.systemDefault()).toInstant());
-        when(stepExecution.getEndTime()).thenReturn(ZonedDateTime.of(endTime, ZoneId.systemDefault()).toInstant());
+        List<StepExecution> stepExecutions = new ArrayList<>();
+        StepExecution stepExecution = mock(StepExecution.class);
+        when(stepExecution.getStepName()).thenReturn("testStep");
+        when(stepExecution.getStartTime()).thenReturn(new Date());
+        when(stepExecution.getEndTime()).thenReturn(new Date());
+        stepExecutions.add(stepExecution);
+        when(jobExecution.getStepExecutions()).thenReturn(stepExecutions);
 
         listener.afterJob(jobExecution);
 
-        verify(gosDAO, times(1)).getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT);
-        verify(batchControl, times(1)).setJobName("testJob");
-        verify(batchControl, times(1)).setStatus(any(BatchStatusEnum.class));
-        verify(batchControl, times(1)).setUpdatedDate(any(LocalDateTime.class));
-        verify(gosDAO, times(1)).insertUpdateBatchStatus(batchControl);
+        verify(gosDAO).getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT);
+        verify(gosDAO).insertUpdateBatchStatus(batchControl);
+        
+        assertEquals("testJob", batchControl.getJobName());
+        assertEquals(BatchStatusEnum.COMPLETED, batchControl.getStatus());
+        assertNotNull(batchControl.getUpdatedDate());
+        assertTrue(batchControl.getRecordCount().contains("Job Name: 1"));
+        assertTrue(batchControl.getRecordCount().contains("testStep took"));
+    }
+
+    @Test
+    void testAfterJobWithExceptions() {
+        BatchControl batchControl = new BatchControl();
+        when(gosDAO.getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT)).thenReturn(batchControl);
+        when(jobExecution.getJobInstance()).thenReturn(jobInstance);
+        when(jobInstance.getJobName()).thenReturn("testJob");
+        when(jobExecution.getStatus()).thenReturn(org.springframework.batch.core.BatchStatus.FAILED);
+        when(jobExecution.getLastUpdated()).thenReturn(new Date());
+
+        List<StepExecution> stepExecutions = new ArrayList<>();
+        StepExecution stepExecution = mock(StepExecution.class);
+        when(stepExecution.getFailureExceptions()).thenReturn(List.of(new RuntimeException("Test exception")));
+        stepExecutions.add(stepExecution);
+        when(jobExecution.getStepExecutions()).thenReturn(stepExecutions);
+
+        listener.afterJob(jobExecution);
+
+        verify(gosDAO).getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT);
+        verify(gosDAO).insertUpdateBatchStatus(batchControl);
+        
+        assertEquals("testJob", batchControl.getJobName());
+        assertEquals(BatchStatusEnum.FAILED, batchControl.getStatus());
+        assertEquals("Test exception", batchControl.getErrorMessage());
     }
 }
-
 ```
 
 ```
