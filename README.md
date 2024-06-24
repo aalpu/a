@@ -10,8 +10,10 @@ import org.springframework.batch.core.StepExecution;
 import org.springframework.core.env.Environment;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Date;
 
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -61,13 +63,15 @@ class CashMatchingAuditBatchListenerTest {
         when(jobInstance.getJobName()).thenReturn("testJob");
         when(jobInstance.getInstanceId()).thenReturn(1L);
         when(jobExecution.getStatus()).thenReturn(org.springframework.batch.core.BatchStatus.COMPLETED);
-        when(jobExecution.getLastUpdated()).thenReturn(java.sql.Timestamp.valueOf(LocalDateTime.now()));
+        
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("America/New_York"));
+        when(jobExecution.getLastUpdated()).thenReturn(Date.from(now.atZone(ZoneId.systemDefault()).toInstant()));
 
         List<StepExecution> stepExecutions = new ArrayList<>();
         StepExecution stepExecution = mock(StepExecution.class);
         when(stepExecution.getStepName()).thenReturn("testStep");
-        when(stepExecution.getStartTime()).thenReturn(java.sql.Timestamp.valueOf(LocalDateTime.now()));
-        when(stepExecution.getEndTime()).thenReturn(java.sql.Timestamp.valueOf(LocalDateTime.now().plusSeconds(10)));
+        when(stepExecution.getStartTime()).thenReturn(Date.from(now.minusMinutes(5).atZone(ZoneId.systemDefault()).toInstant()));
+        when(stepExecution.getEndTime()).thenReturn(Date.from(now.atZone(ZoneId.systemDefault()).toInstant()));
         stepExecutions.add(stepExecution);
         when(jobExecution.getStepExecutions()).thenReturn(stepExecutions);
 
@@ -84,13 +88,17 @@ class CashMatchingAuditBatchListenerTest {
         when(jobExecution.getJobInstance()).thenReturn(jobInstance);
         when(jobInstance.getJobName()).thenReturn("testJob");
         when(jobExecution.getStatus()).thenReturn(org.springframework.batch.core.BatchStatus.FAILED);
-        when(jobExecution.getLastUpdated()).thenReturn(java.sql.Timestamp.valueOf(LocalDateTime.now()));
+        
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("America/New_York"));
+        when(jobExecution.getLastUpdated()).thenReturn(Date.from(now.atZone(ZoneId.systemDefault()).toInstant()));
 
         List<StepExecution> stepExecutions = new ArrayList<>();
         StepExecution stepExecution = mock(StepExecution.class);
         List<Throwable> exceptions = new ArrayList<>();
         exceptions.add(new RuntimeException("Test exception"));
         when(stepExecution.getFailureExceptions()).thenReturn(exceptions);
+        when(stepExecution.getStartTime()).thenReturn(Date.from(now.minusMinutes(5).atZone(ZoneId.systemDefault()).toInstant()));
+        when(stepExecution.getEndTime()).thenReturn(Date.from(now.atZone(ZoneId.systemDefault()).toInstant()));
         stepExecutions.add(stepExecution);
         when(jobExecution.getStepExecutions()).thenReturn(stepExecutions);
 
