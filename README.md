@@ -1,15 +1,17 @@
 ```
-@Test
+    @Test
     public void testAfterJobWithNonNullLastUpdated(@Injectable BatchControl batchControl, @Injectable StepExecution stepExecution) {
-        LocalDateTime lastUpdated = LocalDateTime.now();
+        Date lastUpdated = new Date();
+        LocalDateTime now = LocalDateTime.now();
 
         new Expectations() {{
             gosDAO.getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT); result = batchControl;
             jobExecution.getStepExecutions(); result = List.of(stepExecution);
             stepExecution.getFailureExceptions(); result = Collections.emptyList();
-            stepExecution.getStartTime(); result = LocalDateTime.now();
-            stepExecution.getEndTime(); result = LocalDateTime.now().plusSeconds(5);
+            stepExecution.getStartTime(); result = Date.from(now.toInstant(ZoneOffset.UTC));
+            stepExecution.getEndTime(); result = Date.from(now.plusSeconds(5).toInstant(ZoneOffset.UTC));
             jobExecution.getLastUpdated(); result = lastUpdated;
+            environment.getProperty("time.zone"); result = "America/New_York";
         }};
 
         listener.afterJob(jobExecution);
@@ -19,6 +21,7 @@
             batchControl.setStatus(BatchStatusEnum.COMPLETED); times = 1;
             batchControl.setUpdatedDate(withInstanceOf(LocalDateTime.class)); times = 1;
             gosDAO.insertUpdateBatchStatus(batchControl); times = 1;
+            stepExecution.getFailureExceptions(); times = 1;
         }};
     }
 
