@@ -1,80 +1,81 @@
 ```
+import mockit.Expectations;
+import mockit.Injectable;
+import mockit.Tested;
+import mockit.Verifications;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.core.env.Environment;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobInstance;
 import org.springframework.batch.core.StepExecution;
+import org.springframework.core.env.Environment;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static java.util.stream.Collectors.toList;
 
-@ExtendWith(MockitoExtension.class)
 public class CashMatchingAuditBatchListenerTest {
 
-    @Mock
+    @Tested
+    private CashMatchingAuditBatchListener listener;
+
+    @Injectable
     private GosDAO gosDAO;
 
-    @Mock
+    @Injectable
     private Environment environment;
-
-    @InjectMocks
-    private CashMatchingAuditBatchListener listener;
 
     private JobExecution jobExecution;
 
     @BeforeEach
     public void setUp() {
-        jobExecution = mock(JobExecution.class);
-        JobInstance jobInstance = mock(JobInstance.class);
-        when(jobExecution.getJobInstance()).thenReturn(jobInstance);
-        when(jobInstance.getJobName()).thenReturn("TestJob");
-        when(jobInstance.getInstanceId()).thenReturn(1L);
+        jobExecution = new JobExecution(1L);
+        JobInstance jobInstance = new JobInstance(1L, "TestJob");
+        jobExecution.setJobInstance(jobInstance);
     }
 
     @Test
-    public void testBeforeJob() {
-        BatchControl batchControl = mock(BatchControl.class);
-        when(gosDAO.getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT)).thenReturn(batchControl);
-        when(environment.getProperty("FUNCTIONAL_ACCOUNT")).thenReturn("testUser");
+    public void testBeforeJob(@Injectable BatchControl batchControl) {
+        new Expectations() {{
+            gosDAO.getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT); result = batchControl;
+            environment.getProperty("FUNCTIONAL_ACCOUNT"); result = "testUser";
+        }};
 
         listener.beforeJob(jobExecution);
 
-        verify(batchControl).setJobName("TestJob");
-        verify(batchControl).setStatus(BatchStatusEnum.RUNNING);
-        verify(batchControl).setUpdatedBy("testUser");
-        verify(batchControl).setCreatedBy("testUser");
-        verify(gosDAO).insertUpdateBatchStatus(batchControl);
+        new Verifications() {{
+            batchControl.setJobName("TestJob"); times = 1;
+            batchControl.setStatus(BatchStatusEnum.RUNNING); times = 1;
+            batchControl.setUpdatedBy("testUser"); times = 1;
+            batchControl.setCreatedBy("testUser"); times = 1;
+            gosDAO.insertUpdateBatchStatus(batchControl); times = 1;
+        }};
     }
 
     @Test
-    public void testAfterJob() {
-        BatchControl batchControl = mock(BatchControl.class);
-        when(gosDAO.getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT)).thenReturn(batchControl);
-
-        StepExecution stepExecution = mock(StepExecution.class);
-        when(stepExecution.getFailureExceptions()).thenReturn(Collections.emptyList());
-        when(stepExecution.getStartTime()).thenReturn(LocalDateTime.now());
-        when(stepExecution.getEndTime()).thenReturn(LocalDateTime.now().plusSeconds(5));
-
-        List<StepExecution> stepExecutions = List.of(stepExecution);
-        when(jobExecution.getStepExecutions()).thenReturn(stepExecutions);
-        when(jobExecution.getStatus().toString()).thenReturn("COMPLETED");
+    public void testAfterJob(@Injectable BatchControl batchControl, @Injectable StepExecution stepExecution) {
+        new Expectations() {{
+            gosDAO.getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT); result = batchControl;
+            stepExecution.getFailureExceptions(); result = Collections.emptyList();
+            stepExecution.getStartTime(); result = LocalDateTime.now();
+            stepExecution.getEndTime(); result = LocalDateTime.now().plusSeconds(5);
+            jobExecution.getStepExecutions(); result = List.of(stepExecution);
+            jobExecution.getStatus().toString(); result = "COMPLETED";
+        }};
 
         listener.afterJob(jobExecution);
 
-        verify(batchControl).setJobName("TestJob");
-        verify(batchControl).setStatus(BatchStatusEnum.getBatchStatusFromString("COMPLETED"));
-        verify(gosDAO).insertUpdateBatchStatus(batchControl);
+        new Verifications() {{
+            batchControl.setJobName("TestJob"); times = 1;
+            batchControl.setStatus(BatchStatusEnum.getBatchStatusFromString("COMPLETED")); times = 1;
+            gosDAO.insertUpdateBatchStatus(batchControl); times = 1;
+        }};
     }
 }
+
 ```
 
 
