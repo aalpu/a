@@ -1,4 +1,37 @@
 ```
+package com.jpmorgan.cb.wlt;
+
+import com.jpmorgan.cb.wlt.service.CashMatchingBatchService;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.env.StandardEnvironment;
+
+@ExtendWith(MockitoExtension.class)
+class TradesettlementCashmatchingBatchApplicationTest {
+
+    @InjectMocks
+    TradesettlementCashmatchingBatchApplication tradesettlementCashmatchingBatchApplication;
+
+    @Mock
+    CashMatchingBatchService cashMatchingBatchService;
+
+    @Mock
+    StandardEnvironment environment;
+
+    @Test
+    void tradesettlementCashmatchingBatchApplication() {
+        tradesettlementCashmatchingBatchApplication.main(new String[0]);
+    }
+}
+
+```
+
+```
 import re
 
 def extract_info(file_path):
