@@ -7,27 +7,59 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
-import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.StandardEnvironment;
+import org.springframework.test.context.ActiveProfiles;
+
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@SpringBootTest
+@ActiveProfiles("test")
 class TradesettlementCashmatchingBatchApplicationTest {
+
+    @Mock
+    StandardEnvironment environment;
+
+    @Mock
+    CashMatchingBatchService cashMatchingBatchService;
 
     @InjectMocks
     TradesettlementCashmatchingBatchApplication tradesettlementCashmatchingBatchApplication;
 
     @Mock
-    CashMatchingBatchService cashMatchingBatchService;
-
-    @Mock
-    StandardEnvironment environment;
+    ApplicationContext context;
 
     @Test
-    void tradesettlementCashmatchingBatchApplication() {
-        tradesettlementCashmatchingBatchApplication.main(new String[0]);
+    void testMainMethod() {
+        // Arrange
+        when(context.getBean(CashMatchingBatchService.class)).thenReturn(cashMatchingBatchService);
+        doNothing().when(cashMatchingBatchService).getRecordAndAccountTypeRefData();
+
+        // Act
+        tradesettlementCashmatchingBatchApplication.main(new String[]{});
+
+        // Assert
+        verify(context, atLeastOnce()).getBean(CashMatchingBatchService.class);
+        verify(cashMatchingBatchService, atLeastOnce()).getRecordAndAccountTypeRefData();
+    }
+
+    @Test
+    void testLoadReferenceData() throws Exception {
+        // Arrange
+        CommandLineRunner runner = tradesettlementCashmatchingBatchApplication.loadReferenceData();
+
+        // Act
+        runner.run();
+
+        // Assert
+        verify(cashMatchingBatchService).getRecordAndAccountTypeRefData();
     }
 }
+
 
 ```
 
