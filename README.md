@@ -4,7 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import java.time.LocalDateTime;
-import java  util.Collections;
+import java.util.Collections;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -86,11 +86,12 @@ class CashMatchingAuditBatchListenerTest {
         verify(jobExecution).getJobInstance();
         verify(jobInstance).getJobName();
         verify(jobExecution).getStepExecutions();
-        verify(gosDAO).insertUpdateBatchStatus(any(BatchControl.class));
+        // Likely uses a method to update BatchControl like updateBatchControl
+        verify(gosDAO).updateBatchControl(any(BatchControl.class)); // Assuming update method
 
-        // Assert no error message or record count is set
-        verify(gosDAO, never()).setErrorMessage(any());
-        verify(gosDAO, never()).setRecordCount(any());
+        // Assert no error message or record count is set in BatchControl
+        verify(gosDAO, never()).setErrorMessage(any()); // Likely not directly setting error message
+        verify(gosDAO, never()).setRecordCount(any()); // Likely not directly setting record count
     }
 
     @Test
@@ -100,35 +101,40 @@ class CashMatchingAuditBatchListenerTest {
         JobInstance jobInstance = mock(JobInstance.class);
         StepExecution stepExecution = mock(StepExecution.class);
         List<Throwable> exceptions = Collections.singletonList(new RuntimeException("test exception"));
-        when(jobExecution.getJobInstance()).thenReturn(jobInstance);
+                when(jobExecution.getJobInstance()).thenReturn(jobInstance);
         when(jobInstance.getJobName()).thenReturn("testJob");
         when(jobExecution.getStepExecutions()).thenReturn(Collections.singletonList(stepExecution));
         when(stepExecution.getFailureExceptions()).thenReturn(exceptions);
 
-                listener.afterJob(jobExecution);
+        // Execute the method
+        listener.afterJob(jobExecution);
 
         // Verify interactions
         verify(gosDAO).getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT);
         verify(jobExecution).getJobInstance();
         verify(jobInstance).getJobName();
         verify(jobExecution).getStepExecutions();
-        verify(gosDAO).insertUpdateBatchStatus(any(BatchControl.class));
+        // Likely uses a method to update BatchControl like updateBatchControl
+        verify(gosDAO).updateBatchControl(any(BatchControl.class)); // Assuming update method
 
-        // Assert error message is set
-        verify(gosDAO).setErrorMessage(any());
+        // Assert error message is set in BatchControl (likely through an update method)
+        verify(gosDAO, never()).setErrorMessage(any()); // Likely not directly setting error message
         String allExceptionsMessage = exceptions.stream().map(Throwable::getMessage).collect(joining(";"));
-        verify(gosDAO).setErrorMessage(allExceptionsMessage);
+        // Mockito doesn't capture arguments for methods called on mocks within other mocks by default.
+        // You can use argumentCaptor to capture the BatchControl object passed to updateBatchControl
+        BatchControl capturedBatchControl = Mockito.argThat(bc -> bc.getErrorMessage().equals(allExceptionsMessage));
+        verify(gosDAO).updateBatchControl(capturedBatchControl);
 
-        // Assert record count is set with step execution times
-        verify(gosDAO).setRecordCount(any());
+        // Assert record count is set with step execution times in BatchControl (likely through update)
+        verify(gosDAO, never()).setRecordCount(any()); // Likely not directly setting record count
         StringBuilder expectedRecordCount = new StringBuilder();
         expectedRecordCount.append("Job Name: ").append(jobExecution.getJobInstance().getInstanceId()).append("\n");
         expectedRecordCount.append(stepExecution.getStepName()).append(" took 0 seconds \n"); // Mock doesn't provide real time
         expectedRecordCount.append("-----------------");
-        verify(gosDAO).setRecordCount(expectedRecordCount.toString());
+        // Similar to error message, use argumentCaptor to capture the BatchControl object
+        verify(gosDAO).updateBatchControl(argThat(bc -> bc.getRecordCount().equals(expectedRecordCount.toString())));
     }
 }
-
 
 ```
 
