@@ -1,62 +1,78 @@
 ```
-package com.jpmorgan.cb.wlt;
-
-import com.jpmorgan.cb.wlt.service.CashMatchingBatchService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.ApplicationContext;
-import org.springframework.core.env.StandardEnvironment;
-import org.springframework.test.context.ActiveProfiles;
+import org.slf4j.Logger;
+import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.JobInstance;
+import org.springframework.batch.core.StepExecution;
+import org.springframework.core.env.Environment;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Collections;
+
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@SpringBootTest
-@ActiveProfiles("test")
-class TradesettlementCashmatchingBatchApplicationTest {
-
-    @Mock
-    StandardEnvironment environment;
-
-    @Mock
-    CashMatchingBatchService cashMatchingBatchService;
+class CashMatchingAuditBatchListenerTest {
 
     @InjectMocks
-    TradesettlementCashmatchingBatchApplication tradesettlementCashmatchingBatchApplication;
+    private CashMatchingAuditBatchListener listener;
 
     @Mock
-    ApplicationContext context;
+    private GosDAO gosDAO;
 
-    @Test
-    void testMainMethod() {
-        // Arrange
-        when(context.getBean(CashMatchingBatchService.class)).thenReturn(cashMatchingBatchService);
-        doNothing().when(cashMatchingBatchService).getRecordAndAccountTypeRefData();
+    @Mock
+    private Environment environment;
 
-        // Act
-        tradesettlementCashmatchingBatchApplication.main(new String[]{});
+    @Mock
+    private JobExecution jobExecution;
 
-        // Assert
-        verify(context, atLeastOnce()).getBean(CashMatchingBatchService.class);
-        verify(cashMatchingBatchService, atLeastOnce()).getRecordAndAccountTypeRefData();
+    @Mock
+    private JobInstance jobInstance;
+
+    @Mock
+    private BatchControl batchControl;
+
+    @BeforeEach
+    void setUp() {
+        when(jobExecution.getJobInstance()).thenReturn(jobInstance);
+        when(jobInstance.getJobName()).thenReturn("testJob");
+        when(gosDAO.getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT)).thenReturn(batchControl);
+        when(environment.getProperty("FUNCTIONAL_ACCOUNT")).thenReturn("testUser");
     }
 
     @Test
-    void testLoadReferenceData() throws Exception {
-        // Arrange
-        CommandLineRunner runner = tradesettlementCashmatchingBatchApplication.loadReferenceData();
+    void testBeforeJob() {
+        listener.beforeJob(jobExecution);
 
-        // Act
-        runner.run();
+        verify(gosDAO, times(1)).getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT);
+        verify(batchControl, times(1)).setJobName("testJob");
+        verify(batchControl, times(1)).setStatus(BatchStatusEnum.RUNNING);
+        verify(batchControl, times(1)).setUpdatedBy("testUser");
+        verify(batchControl, times(1)).setCreatedBy("testUser");
+        verify(batchControl, times(2)).setUpdatedDate(any(LocalDateTime.class));
+        verify(batchControl, times(2)).setCreatedDate(any(LocalDateTime.class));
+        verify(gosDAO, times(1)).insertUpdateBatchStatus(batchControl);
+    }
 
-        // Assert
-        verify(cashMatchingBatchService).getRecordAndAccountTypeRefData();
+    @Test
+    void testAfterJob() {
+        StepExecution stepExecution = mock(StepExecution.class);
+        when(jobExecution.getStepExecutions()).thenReturn(Collections.singletonList(stepExecution));
+        when(stepExecution.getFailureExceptions()).thenReturn(Collections.emptyList());
+
+        listener.afterJob(jobExecution);
+
+        verify(gosDAO, times(1)).getLatestBatchRun(BatchTypeEnum.CASHMATCHING_AUDIT);
+        verify(batchControl, times(1)).setJobName("testJob");
+        verify(batchControl, times(1)).setStatus(any(BatchStatusEnum.class));
+        verify(batchControl, times(1)).setUpdatedDate(any(LocalDateTime.class));
+        verify(gosDAO, times(1)).insertUpdateBatchStatus(batchControl);
     }
 }
 
