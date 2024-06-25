@@ -1,9 +1,32 @@
 ```
+   def execute_command_and_get_password(command):
+    """
+    Executes the command in CMD and fetches the password from the output.
+    
+    Args:
+    command (str): The command to be executed.
+    
+    Returns:
+    str: The extracted password from the command output.
+    """
+    # Navigate to the SDK directory and run the password command
     sdk_directory = r'D:\Program Files (x86)\CyberArk\ApplicationPasswordSdk'
     full_command = f'cd /d "{sdk_directory}" && {command}'
     
     result = subprocess.run(full_command, shell=True, capture_output=True, text=True)
     output = result.stdout.strip()
+
+    # Print the output for debugging purposes
+    print(f"Command output: {output}")
+
+    # Extract the password from the second last line of the output
+    output_lines = output.splitlines()
+    if len(output_lines) >= 2:
+        password = output_lines[-2].strip()  # Assuming the password is in the second last line
+    else:
+        password = None
+
+    return password
 
 ```
 
