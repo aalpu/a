@@ -1,32 +1,226 @@
 ```
-   def execute_command_and_get_password(command):
-    """
-    Executes the command in CMD and fetches the password from the output.
-    
-    Args:
-    command (str): The command to be executed.
-    
-    Returns:
-    str: The extracted password from the command output.
-    """
-    # Navigate to the SDK directory and run the password command
-    sdk_directory = r'D:\Program Files (x86)\CyberArk\ApplicationPasswordSdk'
-    full_command = f'cd /d "{sdk_directory}" && {command}'
-    
-    result = subprocess.run(full_command, shell=True, capture_output=True, text=True)
-    output = result.stdout.strip()
+  import org.springframework.batch.core.Job;
+import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
+import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.core.task.TaskExecutor;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-    # Print the output for debugging purposes
-    print(f"Command output: {output}")
+import javax.sql.DataSource;
+import java.util.UUID;
 
-    # Extract the password from the second last line of the output
-    output_lines = output.splitlines()
-    if len(output_lines) >= 2:
-        password = output_lines[-2].strip()  # Assuming the password is in the second last line
-    else:
-        password = None
+@Configuration
+@EnableBatchProcessing
+public class BatchConfiguration {
 
-    return password
+    private static final Logger logger = LoggerFactory.getLogger(BatchConfiguration.class);
+
+    @Autowired
+    @Qualifier("gosDataSource")
+    private DataSource gosDataSource;
+
+    @Autowired
+    @Qualifier("gosAgencyDataSource")
+    private DataSource vsiDataSource;
+
+    @Autowired
+    private Environment environment;
+
+    @Autowired
+    @Qualifier("cashMatchingBackupTasklet")
+    private Tasklet cashMatchingBackupTasklet;
+
+    @Autowired
+    @Qualifier("autoCashMatchingDataTasklet")
+    private Tasklet autoCashMatchingDataTasklet;
+
+    @Autowired
+    @Qualifier("cashMatchingRetrievalVSIReader")
+    private ItemReader<CashMatchingItemDto> cashMatchingRetrievalVSIReader;
+
+    @Autowired
+    @Qualifier("cashMatchingRetrievalGOSWriter")
+    private ItemWriter<CashMatchingItemDto> cashMatchingRetrievalGOSWriter;
+
+    @Autowired
+    @Qualifier("cashMatchingReceivablesInfoGOSReader")
+    private ItemReader<CashMatchingItemDto> cashMatchingReceivablesInfoGOSReader;
+
+    @Autowired
+    @Qualifier("cashFlowRIDRetrieverAndWriter")
+    private ItemWriter<CashMatchingItemDto> cashFlowRIDRetrieverAndWriter;
+
+    @Autowired
+    @Qualifier("reuseCashflowRIDFromBackupTasklet")
+    private Tasklet reuseCashflowRIDFromBackupTasklet;
+
+    @Autowired
+    @Qualifier("markUpdateWireAndeceivableTasklet")
+    private Tasklet markUpdateWireAndeceivableTasklet;
+
+    @Autowired
+    @Qualifier("cashMatchingCopyToAuditTasklet")
+    private Tasklet cashMatchingCopyToAuditTasklet;
+
+    @Autowired
+    @Qualifier("cashMatchingRetrievalBatchListener")
+    private CashMatchingRetrievalBatchListener cashMatchingRetrievalBatchListener;
+
+    @Autowired
+    @Qualifier("cashMatchingAuditBatchListener")
+    private CashMatchingAuditBatchListener cashMatchingAuditBatchListener;
+
+    @Autowired
+    @Qualifier("cashMatchingDailyBatchListener")
+    private CashMatchingDailyBatchListener cashMatchingDailyBatchListener;
+
+    @Autowired
+    @Qualifier("truncateCashMatchingBackupTasklet")
+    private TruncateCashMatchingBackupTasklet truncateCashMatchingBackupTasklet;
+
+    @Autowired
+    private JobRepository jobRepository;
+
+    protected JobRepository createJobRepository() throws Exception {
+        JobRepositoryFactoryBean factory = new JobRepositoryFactoryBean();
+
+        ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        Jackson2ExecutionContextStringSerializer defaultSerializer = new Jackson2ExecutionContextStringSerializer();
+        defaultSerializer.setObjectMapper(objectMapper);
+
+        factory.setDataSource(gosDataSource);
+        factory.setTransactionManager(platformTransactionManager());
+        factory.setIsolationLevelForCreate("ISOLATION_READ_COMMITTED");
+        factory.setSerializer(defaultSerializer);
+
+        return factory.getObject();
+    }
+
+    @Bean
+    public PlatformTransactionManager platformTransactionManager() {
+        return new DataSourceTransactionManager(gosDataSource);
+    }
+
+    @Bean(name = "cashMatchingRetrievalJob")
+    @Primary
+    public Job createCashMatchingRetreivalJob() {
+        String jobID = "cashmatching-retreival-" + UUID.randomUUID().toString();
+
+        return new JobBuilder(jobID, jobRepository)
+                .incrementer(new RunIdIncrementer())
+                .start(cashMatchingDataBackupStep())
+                .listener(cashMatchingRetrievalBatchListener)
+                .next(retreiveCashMatchingDataStep())
+                .next(markUpdatedWireAndReceivableStep())
+                .next(reuseCashflowRIDFromBackupTableStep())
+                .next(truncateCashMatchingBackupTableStep())
+                .next(updateCashFlowRidStep())
+                .build();
+    }
+
+    @Bean(name = "cashMatchingAuditJob")
+    public Job createCashMatchingAuditJob() {
+        String jobID = "cashmatching-audit-" + UUID.randomUUID().toString();
+
+        return new JobBuilder(jobID, jobRepository)
+                .incrementer(new RunIdIncrementer())
+                .start(cashMatchingAuditStep())
+                .listener(cashMatchingAuditBatchListener)
+                .build();
+    }
+
+    @Bean(name = "autoCashMatchingJob")
+    public Job createAutoCashMatchingJob() {
+        String jobID = "auto-cashmatching-" + UUID.randomUUID().toString();
+
+        return new JobBuilder(jobID, jobRepository)
+                .incrementer(new RunIdIncrementer())
+                .start(autoCashMatchingStep())
+                .listener(cashMatchingDailyBatchListener)
+                .build();
+    }
+
+    @Bean
+    public Step autoCashMatchingStep() {
+        return new StepBuilder("autocashMatchingStep", jobRepository)
+                .tasklet(autoCashMatchingDataTasklet)
+                .build();
+    }
+
+    @Bean
+    public Step cashMatchingDataBackupStep() {
+        return new StepBuilder("cashMatchingDataBackupStep", jobRepository)
+                .tasklet(cashMatchingBackupTasklet)
+                .build();
+    }
+
+    @Bean
+    public Step retreiveCashMatchingDataStep() {
+        return new StepBuilder("retreiveCashMatchingDataStep", jobRepository)
+                .<CashMatchingItemDto, CashMatchingItemDto>chunk(Integer.parseInt(environment.getProperty("cashmatching.batch.items.size")))
+                .reader(cashMatchingRetrievalVSIReader)
+                .writer(cashMatchingRetrievalGOSWriter)
+                .build();
+    }
+
+    @Bean
+    public Step cashMatchingAuditStep() {
+        return new StepBuilder("cashMatchingAuditStep", jobRepository)
+                .tasklet(cashMatchingCopyToAuditTasklet)
+                .build();
+    }
+
+    @Bean
+    public Step markUpdatedWireAndReceivableStep() {
+        return new StepBuilder("markUpdatedWireAndReceivableStep", jobRepository)
+                .tasklet(markUpdateWireAndeceivableTasklet)
+                .build();
+    }
+
+    @Bean
+    public Step updateCashFlowRidStep() {
+        return new StepBuilder("updateCashFlowRidStep", jobRepository)
+                .<CashMatchingItemDto, CashMatchingItemDto>chunk(Integer.parseInt(environment.getProperty("cashmatching.batch.items.size")))
+                .reader(cashMatchingReceivablesInfoGOSReader)
+                .writer(cashFlowRIDRetrieverAndWriter)
+                .build();
+    }
+
+    @Bean
+    public Step reuseCashflowRIDFromBackupTableStep() {
+        return new StepBuilder("reuseCashflowRIDFromBackupTableStep", jobRepository)
+                .tasklet(reuseCashflowRIDFromBackupTasklet)
+                .build();
+    }
+
+    @Bean
+    public Step truncateCashMatchingBackupTableStep() {
+        return new StepBuilder("truncateCashMatchingBackupTableStep", jobRepository)
+                .tasklet(truncateCashMatchingBackupTasklet)
+                .build();
+    }
+
+    @Bean(name = "dbTaskExecutor")
+    public ThreadPoolTaskExecutor createTaskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setMaxPoolSize(10);
+        executor.setCorePoolSize(2);
+        executor.setBeanName("cashmatching-liq-db-writer");
+        return executor;
+    }
+}
+
 
 ```
 
