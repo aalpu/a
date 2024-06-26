@@ -1,5 +1,5 @@
 ```
-  import org.springframework.batch.core.Job;
+ import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.job.builder.JobBuilder;
@@ -36,14 +36,6 @@ public class BatchConfiguration {
     private Environment environment;
 
     @Autowired
-    @Qualifier("cashMatchingBackupTasklet")
-    private Tasklet cashMatchingBackupTasklet;
-
-    @Autowired
-    @Qualifier("autoCashMatchingDataTasklet")
-    private Tasklet autoCashMatchingDataTasklet;
-
-    @Autowired
     @Qualifier("cashMatchingRetrievalVSIReader")
     private ItemReader<CashMatchingItemDto> cashMatchingRetrievalVSIReader;
 
@@ -60,18 +52,6 @@ public class BatchConfiguration {
     private ItemWriter<CashMatchingItemDto> cashFlowRIDRetrieverAndWriter;
 
     @Autowired
-    @Qualifier("reuseCashflowRIDFromBackupTasklet")
-    private Tasklet reuseCashflowRIDFromBackupTasklet;
-
-    @Autowired
-    @Qualifier("markUpdateWireAndeceivableTasklet")
-    private Tasklet markUpdateWireAndeceivableTasklet;
-
-    @Autowired
-    @Qualifier("cashMatchingCopyToAuditTasklet")
-    private Tasklet cashMatchingCopyToAuditTasklet;
-
-    @Autowired
     @Qualifier("cashMatchingRetrievalBatchListener")
     private CashMatchingRetrievalBatchListener cashMatchingRetrievalBatchListener;
 
@@ -84,11 +64,37 @@ public class BatchConfiguration {
     private CashMatchingDailyBatchListener cashMatchingDailyBatchListener;
 
     @Autowired
-    @Qualifier("truncateCashMatchingBackupTasklet")
-    private TruncateCashMatchingBackupTasklet truncateCashMatchingBackupTasklet;
-
-    @Autowired
     private JobRepository jobRepository;
+
+    @Bean
+    public Tasklet cashMatchingBackupTasklet() {
+        return new CashMatchingBackupTasklet();
+    }
+
+    @Bean
+    public Tasklet autoCashMatchingDataTasklet() {
+        return new AutoCashMatchingDataTasklet();
+    }
+
+    @Bean
+    public Tasklet reuseCashflowRIDFromBackupTasklet() {
+        return new ReuseCashflowRIDFromBackupTasklet();
+    }
+
+    @Bean
+    public Tasklet markUpdateWireAndeceivableTasklet() {
+        return new MarkUpdateWireAndReceivableTasklet();
+    }
+
+    @Bean
+    public Tasklet cashMatchingCopyToAuditTasklet() {
+        return new CashMatchingCopyToAuditTasklet();
+    }
+
+    @Bean
+    public Tasklet truncateCashMatchingBackupTasklet() {
+        return new TruncateCashMatchingBackupTasklet();
+    }
 
     protected JobRepository createJobRepository() throws Exception {
         JobRepositoryFactoryBean factory = new JobRepositoryFactoryBean();
@@ -154,21 +160,21 @@ public class BatchConfiguration {
     @Bean
     public Step autoCashMatchingStep() {
         return new StepBuilder("autocashMatchingStep", jobRepository)
-                .tasklet(autoCashMatchingDataTasklet)
+                .tasklet(autoCashMatchingDataTasklet(), platformTransactionManager())
                 .build();
     }
 
     @Bean
     public Step cashMatchingDataBackupStep() {
         return new StepBuilder("cashMatchingDataBackupStep", jobRepository)
-                .tasklet(cashMatchingBackupTasklet)
+                .tasklet(cashMatchingBackupTasklet(), platformTransactionManager())
                 .build();
     }
 
     @Bean
     public Step retreiveCashMatchingDataStep() {
         return new StepBuilder("retreiveCashMatchingDataStep", jobRepository)
-                .<CashMatchingItemDto, CashMatchingItemDto>chunk(Integer.parseInt(environment.getProperty("cashmatching.batch.items.size")))
+                .<CashMatchingItemDto, CashMatchingItemDto>chunk(Integer.parseInt(environment.getProperty("cashmatching.batch.items.size")), platformTransactionManager())
                 .reader(cashMatchingRetrievalVSIReader)
                 .writer(cashMatchingRetrievalGOSWriter)
                 .build();
@@ -177,21 +183,21 @@ public class BatchConfiguration {
     @Bean
     public Step cashMatchingAuditStep() {
         return new StepBuilder("cashMatchingAuditStep", jobRepository)
-                .tasklet(cashMatchingCopyToAuditTasklet)
+                .tasklet(cashMatchingCopyToAuditTasklet(), platformTransactionManager())
                 .build();
     }
 
     @Bean
     public Step markUpdatedWireAndReceivableStep() {
         return new StepBuilder("markUpdatedWireAndReceivableStep", jobRepository)
-                .tasklet(markUpdateWireAndeceivableTasklet)
+                .tasklet(markUpdateWireAndeceivableTasklet(), platformTransactionManager())
                 .build();
     }
 
     @Bean
     public Step updateCashFlowRidStep() {
         return new StepBuilder("updateCashFlowRidStep", jobRepository)
-                .<CashMatchingItemDto, CashMatchingItemDto>chunk(Integer.parseInt(environment.getProperty("cashmatching.batch.items.size")))
+                .<CashMatchingItemDto, CashMatchingItemDto>chunk(Integer.parseInt(environment.getProperty("cashmatching.batch.items.size")), platformTransactionManager())
                 .reader(cashMatchingReceivablesInfoGOSReader)
                 .writer(cashFlowRIDRetrieverAndWriter)
                 .build();
@@ -200,14 +206,14 @@ public class BatchConfiguration {
     @Bean
     public Step reuseCashflowRIDFromBackupTableStep() {
         return new StepBuilder("reuseCashflowRIDFromBackupTableStep", jobRepository)
-                .tasklet(reuseCashflowRIDFromBackupTasklet)
+                .tasklet(reuseCashflowRIDFromBackupTasklet(), platformTransactionManager())
                 .build();
     }
 
     @Bean
     public Step truncateCashMatchingBackupTableStep() {
         return new StepBuilder("truncateCashMatchingBackupTableStep", jobRepository)
-                .tasklet(truncateCashMatchingBackupTasklet)
+                .tasklet(truncateCashMatchingBackupTasklet(), platformTransactionManager())
                 .build();
     }
 
@@ -220,6 +226,7 @@ public class BatchConfiguration {
         return executor;
     }
 }
+
 
 
 ```
