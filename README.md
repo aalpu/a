@@ -1,233 +1,27 @@
 ```
- import org.springframework.batch.core.Job;
-import org.springframework.batch.core.Step;
-import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
-import org.springframework.batch.core.job.builder.JobBuilder;
-import org.springframework.batch.core.repository.JobRepository;
-import org.springframework.batch.core.step.builder.StepBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.core.task.TaskExecutor;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+from transformers import pipeline
+import torchaudio
 
-import javax.sql.DataSource;
-import java.util.UUID;
+# Load the audio file
+def load_audio(file_path):
+    waveform, sample_rate = torchaudio.load(file_path)
+    return waveform, sample_rate
 
-@Configuration
-@EnableBatchProcessing
-public class BatchConfiguration {
+# Initialize the Whisper model pipeline
+pipe = pipeline("automatic-speech-recognition", model="openai/whisper-large-v3")
 
-    private static final Logger logger = LoggerFactory.getLogger(BatchConfiguration.class);
+# Transcribe the audio
+def transcribe_audio(file_path):
+    waveform, sample_rate = load_audio(file_path)
+    transcription = pipe(waveform.numpy(), sampling_rate=sample_rate)
+    return transcription["text"]
 
-    @Autowired
-    @Qualifier("gosDataSource")
-    private DataSource gosDataSource;
+# Specify the path to your audio file
+audio_file_path = "path/to/your/audio/file.wav"
 
-    @Autowired
-    @Qualifier("gosAgencyDataSource")
-    private DataSource vsiDataSource;
-
-    @Autowired
-    private Environment environment;
-
-    @Autowired
-    @Qualifier("cashMatchingRetrievalVSIReader")
-    private ItemReader<CashMatchingItemDto> cashMatchingRetrievalVSIReader;
-
-    @Autowired
-    @Qualifier("cashMatchingRetrievalGOSWriter")
-    private ItemWriter<CashMatchingItemDto> cashMatchingRetrievalGOSWriter;
-
-    @Autowired
-    @Qualifier("cashMatchingReceivablesInfoGOSReader")
-    private ItemReader<CashMatchingItemDto> cashMatchingReceivablesInfoGOSReader;
-
-    @Autowired
-    @Qualifier("cashFlowRIDRetrieverAndWriter")
-    private ItemWriter<CashMatchingItemDto> cashFlowRIDRetrieverAndWriter;
-
-    @Autowired
-    @Qualifier("cashMatchingRetrievalBatchListener")
-    private CashMatchingRetrievalBatchListener cashMatchingRetrievalBatchListener;
-
-    @Autowired
-    @Qualifier("cashMatchingAuditBatchListener")
-    private CashMatchingAuditBatchListener cashMatchingAuditBatchListener;
-
-    @Autowired
-    @Qualifier("cashMatchingDailyBatchListener")
-    private CashMatchingDailyBatchListener cashMatchingDailyBatchListener;
-
-    @Autowired
-    private JobRepository jobRepository;
-
-    @Bean
-    public Tasklet cashMatchingBackupTasklet() {
-        return new CashMatchingBackupTasklet();
-    }
-
-    @Bean
-    public Tasklet autoCashMatchingDataTasklet() {
-        return new AutoCashMatchingDataTasklet();
-    }
-
-    @Bean
-    public Tasklet reuseCashflowRIDFromBackupTasklet() {
-        return new ReuseCashflowRIDFromBackupTasklet();
-    }
-
-    @Bean
-    public Tasklet markUpdateWireAndeceivableTasklet() {
-        return new MarkUpdateWireAndReceivableTasklet();
-    }
-
-    @Bean
-    public Tasklet cashMatchingCopyToAuditTasklet() {
-        return new CashMatchingCopyToAuditTasklet();
-    }
-
-    @Bean
-    public Tasklet truncateCashMatchingBackupTasklet() {
-        return new TruncateCashMatchingBackupTasklet();
-    }
-
-    protected JobRepository createJobRepository() throws Exception {
-        JobRepositoryFactoryBean factory = new JobRepositoryFactoryBean();
-
-        ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
-        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
-        Jackson2ExecutionContextStringSerializer defaultSerializer = new Jackson2ExecutionContextStringSerializer();
-        defaultSerializer.setObjectMapper(objectMapper);
-
-        factory.setDataSource(gosDataSource);
-        factory.setTransactionManager(platformTransactionManager());
-        factory.setIsolationLevelForCreate("ISOLATION_READ_COMMITTED");
-        factory.setSerializer(defaultSerializer);
-
-        return factory.getObject();
-    }
-
-    @Bean
-    public PlatformTransactionManager platformTransactionManager() {
-        return new DataSourceTransactionManager(gosDataSource);
-    }
-
-    @Bean(name = "cashMatchingRetrievalJob")
-    @Primary
-    public Job createCashMatchingRetreivalJob() {
-        String jobID = "cashmatching-retreival-" + UUID.randomUUID().toString();
-
-        return new JobBuilder(jobID, jobRepository)
-                .incrementer(new RunIdIncrementer())
-                .start(cashMatchingDataBackupStep())
-                .listener(cashMatchingRetrievalBatchListener)
-                .next(retreiveCashMatchingDataStep())
-                .next(markUpdatedWireAndReceivableStep())
-                .next(reuseCashflowRIDFromBackupTableStep())
-                .next(truncateCashMatchingBackupTableStep())
-                .next(updateCashFlowRidStep())
-                .build();
-    }
-
-    @Bean(name = "cashMatchingAuditJob")
-    public Job createCashMatchingAuditJob() {
-        String jobID = "cashmatching-audit-" + UUID.randomUUID().toString();
-
-        return new JobBuilder(jobID, jobRepository)
-                .incrementer(new RunIdIncrementer())
-                .start(cashMatchingAuditStep())
-                .listener(cashMatchingAuditBatchListener)
-                .build();
-    }
-
-    @Bean(name = "autoCashMatchingJob")
-    public Job createAutoCashMatchingJob() {
-        String jobID = "auto-cashmatching-" + UUID.randomUUID().toString();
-
-        return new JobBuilder(jobID, jobRepository)
-                .incrementer(new RunIdIncrementer())
-                .start(autoCashMatchingStep())
-                .listener(cashMatchingDailyBatchListener)
-                .build();
-    }
-
-    @Bean
-    public Step autoCashMatchingStep() {
-        return new StepBuilder("autocashMatchingStep", jobRepository)
-                .tasklet(autoCashMatchingDataTasklet(), platformTransactionManager())
-                .build();
-    }
-
-    @Bean
-    public Step cashMatchingDataBackupStep() {
-        return new StepBuilder("cashMatchingDataBackupStep", jobRepository)
-                .tasklet(cashMatchingBackupTasklet(), platformTransactionManager())
-                .build();
-    }
-
-    @Bean
-    public Step retreiveCashMatchingDataStep() {
-        return new StepBuilder("retreiveCashMatchingDataStep", jobRepository)
-                .<CashMatchingItemDto, CashMatchingItemDto>chunk(Integer.parseInt(environment.getProperty("cashmatching.batch.items.size")), platformTransactionManager())
-                .reader(cashMatchingRetrievalVSIReader)
-                .writer(cashMatchingRetrievalGOSWriter)
-                .build();
-    }
-
-    @Bean
-    public Step cashMatchingAuditStep() {
-        return new StepBuilder("cashMatchingAuditStep", jobRepository)
-                .tasklet(cashMatchingCopyToAuditTasklet(), platformTransactionManager())
-                .build();
-    }
-
-    @Bean
-    public Step markUpdatedWireAndReceivableStep() {
-        return new StepBuilder("markUpdatedWireAndReceivableStep", jobRepository)
-                .tasklet(markUpdateWireAndeceivableTasklet(), platformTransactionManager())
-                .build();
-    }
-
-    @Bean
-    public Step updateCashFlowRidStep() {
-        return new StepBuilder("updateCashFlowRidStep", jobRepository)
-                .<CashMatchingItemDto, CashMatchingItemDto>chunk(Integer.parseInt(environment.getProperty("cashmatching.batch.items.size")), platformTransactionManager())
-                .reader(cashMatchingReceivablesInfoGOSReader)
-                .writer(cashFlowRIDRetrieverAndWriter)
-                .build();
-    }
-
-    @Bean
-    public Step reuseCashflowRIDFromBackupTableStep() {
-        return new StepBuilder("reuseCashflowRIDFromBackupTableStep", jobRepository)
-                .tasklet(reuseCashflowRIDFromBackupTasklet(), platformTransactionManager())
-                .build();
-    }
-
-    @Bean
-    public Step truncateCashMatchingBackupTableStep() {
-        return new StepBuilder("truncateCashMatchingBackupTableStep", jobRepository)
-                .tasklet(truncateCashMatchingBackupTasklet(), platformTransactionManager())
-                .build();
-    }
-
-    @Bean(name = "dbTaskExecutor")
-    public ThreadPoolTaskExecutor createTaskExecutor() {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setMaxPoolSize(10);
-        executor.setCorePoolSize(2);
-        executor.setBeanName("cashmatching-liq-db-writer");
-        return executor;
-    }
-}
-
-
+# Get the transcription
+transcription = transcribe_audio(audio_file_path)
+print("Transcription:", transcription)
 
 ```
 
