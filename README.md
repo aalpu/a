@@ -17,17 +17,15 @@ unzip_model(zip_file_path, extract_directory)
 
 ```
 ```
-!pip install transformers pydub numpy
+import torch
+from transformers import AutoProcessor, Wav2Vec2ForCTC
 
-from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
+# Load the processor and the model
+processor = AutoProcessor.from_pretrained("./downloaded_models/whisper-large-v3")
 
-# Load the unzipped Whisper model
-model_directory = "./downloaded_models/whisper-large-v3"
-processor = AutoProcessor.from_pretrained(model_directory)
-model = AutoModelForSpeechSeq2Seq.from_pretrained(model_directory)
+# Load the PyTorch model
+model = Wav2Vec2ForCTC.from_pretrained("./downloaded_models/whisper-large-v3")
 
-# Initialize the Whisper model pipeline
-pipe = pipeline("automatic-speech-recognition", model=model, processor=processor)
 
 ```
 
@@ -47,13 +45,18 @@ def load_audio(file_path):
     waveform = np.array(samples).astype(np.float32) / np.iinfo(samples.typecode).max
     return waveform, sample_rate
 
+
 ```
 ```
 # Transcribe the audio
 def transcribe_audio(file_path):
     waveform, sample_rate = load_audio(file_path)
-    transcription = pipe(waveform, sampling_rate=sample_rate)
-    return transcription["text"]
+    inputs = processor(waveform, sampling_rate=sample_rate, return_tensors="pt")
+    with torch.no_grad():
+        logits = model(inputs.input_values).logits
+    predicted_ids = torch.argmax(logits, dim=-1)
+    transcription = processor.batch_decode(predicted_ids)
+    return transcription[0]
 
 # Specify the path to your audio file
 audio_file_path = "./downloaded_models/your_audio_file.mp3"
@@ -61,6 +64,7 @@ audio_file_path = "./downloaded_models/your_audio_file.mp3"
 # Get the transcription
 transcription = transcribe_audio(audio_file_path)
 print("Transcription:", transcription)
+
 
 
 ```
