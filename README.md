@@ -1,91 +1,25 @@
 ```
-import zipfile
-import os
-
-def unzip_model(zip_path, extract_to):
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-        zip_ref.extractall(extract_to)
-    print(f"Model unzipped to {extract_to}")
-
-# Specify the path to your zip file and the extraction directory
-zip_file_path = "./downloaded_models/whisper-large-v3.zip"
-extract_directory = "./downloaded_models/whisper-large-v3"
-
-# Unzip the model
-unzip_model(zip_file_path, extract_directory)
-
-
-```
-```
-import torch
-from transformers import AutoProcessor, Wav2Vec2ForCTC
-
-# Load the processor and the model
-processor = AutoProcessor.from_pretrained("./downloaded_models/whisper-large-v3")
-
-# Load the PyTorch model
-model = Wav2Vec2ForCTC.from_pretrained("./downloaded_models/whisper-large-v3")
-
+ffmpeg -i your_audio.mp3 -acodec pcm_s16le -ar 16000 your_audio.wav
 
 ```
 
 ```
-from pydub import AudioSegment
-import numpy as np
+import whisper
 
-# Load the audio file using pydub
-def load_audio(file_path):
-    audio = AudioSegment.from_file(file_path)
-    # Convert audio to mono
-    audio = audio.set_channels(1)
-    # Export as raw audio data
-    samples = audio.get_array_of_samples()
-    sample_rate = audio.frame_rate
-    # Convert samples to numpy array
-    waveform = np.array(samples).astype(np.float32) / np.iinfo(samples.typecode).max
-    return waveform, sample_rate
+# Load the Whisper model
+model = whisper.load_model("base")
 
+# Specify the path to your converted WAV audio file
+audio_path = "path/to/your_audio.wav"
 
-```
-```
-# Transcribe the audio
-def transcribe_audio(file_path):
-    waveform, sample_rate = load_audio(file_path)
-    inputs = processor(waveform, sampling_rate=sample_rate, return_tensors="pt")
-    with torch.no_grad():
-        logits = model(inputs.input_values).logits
-    predicted_ids = torch.argmax(logits, dim=-1)
-    transcription = processor.batch_decode(predicted_ids)
-    return transcription[0]
+# Transcribe the audio file to text
+result = model.transcribe(audio_path)
 
-# Specify the path to your audio file
-audio_file_path = "./downloaded_models/your_audio_file.mp3"
-
-# Get the transcription
-transcription = transcribe_audio(audio_file_path)
-print("Transcription:", transcription)
-
+# Print the transcribed text
+print(result['text'])
 
 
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
