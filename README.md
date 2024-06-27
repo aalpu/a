@@ -1,29 +1,89 @@
 ```
-from transformers import pipeline
-import torchaudio
+import zipfile
+import os
 
-# Load the audio file
-def load_audio(file_path):
-    waveform, sample_rate = torchaudio.load(file_path)
-    return waveform, sample_rate
+def unzip_model(zip_path, extract_to):
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(extract_to)
+    print(f"Model unzipped to {extract_to}")
+
+# Specify the path to your zip file and the extraction directory
+zip_file_path = "./downloaded_models/whisper-large-v3.zip"
+extract_directory = "./downloaded_models/whisper-large-v3"
+
+# Unzip the model
+unzip_model(zip_file_path, extract_directory)
+
+
+```
+```
+!pip install transformers pydub numpy
+
+from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
+
+# Load the unzipped Whisper model
+model_directory = "./downloaded_models/whisper-large-v3"
+processor = AutoProcessor.from_pretrained(model_directory)
+model = AutoModelForSpeechSeq2Seq.from_pretrained(model_directory)
 
 # Initialize the Whisper model pipeline
-pipe = pipeline("automatic-speech-recognition", model="openai/whisper-large-v3")
+pipe = pipeline("automatic-speech-recognition", model=model, processor=processor)
 
+```
+
+```
+from pydub import AudioSegment
+import numpy as np
+
+# Load the audio file using pydub
+def load_audio(file_path):
+    audio = AudioSegment.from_file(file_path)
+    # Convert audio to mono
+    audio = audio.set_channels(1)
+    # Export as raw audio data
+    samples = audio.get_array_of_samples()
+    sample_rate = audio.frame_rate
+    # Convert samples to numpy array
+    waveform = np.array(samples).astype(np.float32) / np.iinfo(samples.typecode).max
+    return waveform, sample_rate
+
+```
+```
 # Transcribe the audio
 def transcribe_audio(file_path):
     waveform, sample_rate = load_audio(file_path)
-    transcription = pipe(waveform.numpy(), sampling_rate=sample_rate)
+    transcription = pipe(waveform, sampling_rate=sample_rate)
     return transcription["text"]
 
 # Specify the path to your audio file
-audio_file_path = "path/to/your/audio/file.wav"
+audio_file_path = "./downloaded_models/your_audio_file.mp3"
 
 # Get the transcription
 transcription = transcribe_audio(audio_file_path)
 print("Transcription:", transcription)
 
+
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ```
