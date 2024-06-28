@@ -1,24 +1,42 @@
 ```
-ffmpeg -i your_audio.mp3 -acodec pcm_s16le -ar 16000 your_audio.wav
+Sure, here are some suggested points for each slide:
+
+### Problem Statement
+- **Password Management Complexity**: The process of managing and fetching application passwords from multiple servers is complex and prone to human error.
+- **Manual Effort**: The current method requires manual intervention to retrieve passwords, leading to inefficiencies and potential security risks.
+- **Consistency**: Ensuring that passwords across different servers are consistent and securely stored is a challenge.
+- **Reporting**: There is a need for automated reporting to verify password consistency and highlight discrepancies.
+
+### How We Solve
+- **Automation with Script**: Developed an automation script to handle the process of fetching and comparing passwords across multiple servers.
+- **Log Parsing**: Implemented a function to parse `AppAudit.log` files to dynamically generate password retrieval commands.
+- **Command Execution**: Used Python's `subprocess` module to securely run commands in the CMD and extract the required passwords.
+- **Password Management**: Stored and compared passwords to ensure consistency, with an automated reporting system to highlight mismatches.
+- **Error Handling**: Added robust error handling to manage missing log files and invalid log formats, ensuring the script runs smoothly.
+
+### Challenges Faced
+- **Log Parsing Complexity**: Parsing the `AppAudit.log` file accurately to extract necessary values was challenging due to varied log formats.
+- **Command Execution**: Ensuring the commands run smoothly on different server environments without manual intervention required extensive testing.
+- **Password Consistency Check**: Implementing a reliable method to compare passwords and generate reports dynamically.
+- **Error Management**: Handling scenarios where logs are missing or incorrectly formatted without disrupting the automation process.
+- **Security Considerations**: Ensuring the password retrieval and storage processes were secure and met organizational security policies.
+
+### Future Enhancements
+- **Scalability**: Extend the script to handle a larger number of servers and more complex password management scenarios.
+- **GUI Development**: Develop a graphical user interface for easier configuration and management of the automation script.
+- **Enhanced Reporting**: Include more detailed reporting features, such as historical password comparisons and trend analysis.
+- **Integration**: Integrate with other IT management tools and systems for seamless automation within the IT infrastructure.
+- **Real-Time Monitoring**: Implement real-time monitoring and alerting to detect and respond to password discrepancies immediately.
+- **Machine Learning**: Use machine learning to predict and prevent potential password management issues based on historical data and trends.
+
+These points should help create a comprehensive and informative presentation for your demo.
 
 ```
 
 ```
-import whisper
+### Problem Statement
 
-# Load the Whisper model
-model = whisper.load_model("base")
-
-# Specify the path to your converted WAV audio file
-audio_path = "path/to/your_audio.wav"
-
-# Transcribe the audio file to text
-result = model.transcribe(audio_path)
-
-# Print the transcribed text
-print(result['text'])
-
-
+During Disaster Recovery (DR) sessions, we shift our applications from Production servers to Disaster Recovery servers. To ensure the transition is smooth and the applications are functioning correctly, it is crucial to verify that database connections on the DR servers are successful. The current manual process of managing and fetching application passwords, and checking database connections across multiple servers, is inefficient and requires significant time. This manual effort can lead to inconsistencies, security risks, and delays in the recovery process, necessitating an automated solution to streamline these critical checks during DR sessions.
 ```
 
 
