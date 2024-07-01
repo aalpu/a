@@ -1,19 +1,35 @@
 
 ```
-### Weekly Progress Report
+### Use Case of the Automation Script
 
-#### Java and Photon Migration of Trade Settlement Cash Matching Batch
-- Successfully upgraded Photon from 2.7 to 3.0
-- Successfully upgraded Photon from 3.0 to 3.1
-- Upgrade to Photon 3.2 is in progress (currently addressing errors related to list and chunk, and updating test cases)
-- Fixed errors in JUnit test cases
-- Created new test cases from scratch as the previous ones were non-functional despite updates to annotations and code
+1. **Disaster Recovery (DR) Sessions:**
+   - Ensures successful database connections when shifting applications from production to DR servers.
 
-#### Java and Photon Migration of Trade Settlement Cash Matching
-- Java upgrade from version 11 to 17 is in progress
+2. **Automated Password Fetching:**
+   - Extracts and constructs password-fetching commands based on logs.
+   - Executes the command to retrieve passwords from servers.
 
-#### L2: EPV ID Validation
-- Provided a demo to Kananan and Hajira
+3. **Password Comparison:**
+   - Collects passwords from multiple servers.
+   - Compares the collected passwords to ensure consistency across servers.
+
+4. **Report Generation:**
+   - Generates detailed reports indicating password match status.
+   - Highlights any mismatched passwords along with server names.
+
+5. **Error Handling:**
+   - Checks for the presence of necessary log files.
+   - Handles and logs errors if logs are missing or improperly formatted.
+
+6. **Efficiency Improvement:**
+   - Automates a previously manual and time-consuming process.
+   - Reduces downtime and enhances reliability during DR sessions.
+
+7. **Periodic Checks:**
+   - Can be used for regular verification of password consistency across servers.
+
+8. **Security and Compliance:**
+   - Ensures secure and consistent access credentials across production and DR environments.
 
 ```
 ```
